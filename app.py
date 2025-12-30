@@ -18,11 +18,14 @@ from database import load_rooms
 from models import Guest
 
 
+# ---------------------------------------------------------
+# Grundkonfiguration
+# ---------------------------------------------------------
 st.set_page_config(page_title="Hotelverwaltung", layout="wide")
 
 
 # ---------------------------------------------------------
-# Logo anzeigen (zentriert, Render-kompatibel)
+# Logo anzeigen (oben mittig)
 # ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
@@ -36,7 +39,7 @@ def show_logo():
 
         st.markdown(
             f"""
-            <div style="display: flex; justify-content: center; margin-top: 10px; margin-bottom: 20px;">
+            <div style="width: 100%; text-align: center; margin-top: 5px; margin-bottom: 5px;">
                 <img src="data:image/png;base64,{encoded}" style="width: 180px;">
             </div>
             """,
@@ -49,12 +52,34 @@ show_logo()
 
 
 # ---------------------------------------------------------
-# Hotel-ID abfragen (Kundentrennung)
+# Hotel-ID abfragen + Logout
 # ---------------------------------------------------------
 st.sidebar.title("Hotel auswählen")
-hotel_id = st.sidebar.text_input("Hotel-ID eingeben (z. B. hotel1)")
 
-if not hotel_id:
+# Session-State initialisieren
+if "hotel_id" not in st.session_state:
+    st.session_state.hotel_id = ""
+
+# Wenn keine Hotel-ID gesetzt ist → Eingabefeld anzeigen
+if st.session_state.hotel_id == "":
+    hotel_input = st.sidebar.text_input("Hotel-ID eingeben (z. B. hotel1)")
+
+    if hotel_input:
+        st.session_state.hotel_id = hotel_input.strip()
+        st.rerun()
+
+# Wenn Hotel-ID gesetzt ist → anzeigen + Logout anbieten
+else:
+    st.sidebar.success(f"Hotel: {st.session_state.hotel_id}")
+
+    if st.sidebar.button("Logout"):
+        st.session_state.hotel_id = ""
+        st.rerun()
+
+hotel_id = st.session_state.hotel_id
+
+# Wenn weiterhin keine ID → App stoppen
+if hotel_id == "":
     st.warning("Bitte eine Hotel-ID eingeben, um fortzufahren.")
     st.stop()
 
