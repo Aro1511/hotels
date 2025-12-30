@@ -1,5 +1,4 @@
 import streamlit as st
-st.write("DEBUG VERSION 7")
 import csv
 import io
 from PIL import Image
