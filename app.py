@@ -25,21 +25,21 @@ st.set_page_config(page_title="Hotelverwaltung", layout="wide")
 
 
 # ---------------------------------------------------------
-# Logo anzeigen (oben mittig)
+# Logo anzeigen (rechts oben)
 # ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
 
-def show_logo():
+def show_logo_right():
     try:
         logo = Image.open("logo.png")
         encoded = image_to_base64(logo)
 
         st.markdown(
             f"""
-            <div style="width: 100%; text-align: center; margin-top: 5px; margin-bottom: 5px;">
+            <div style="width: 100%; text-align: right; margin-top: 5px; margin-bottom: 5px;">
                 <img src="data:image/png;base64,{encoded}" style="width: 180px;">
             </div>
             """,
@@ -48,24 +48,29 @@ def show_logo():
     except Exception:
         st.warning("Logo konnte nicht geladen werden. Stelle sicher, dass 'logo.png' im Projektordner liegt.")
 
-show_logo()
+show_logo_right()
 
 
 # ---------------------------------------------------------
-# Hotel-ID abfragen + Logout
+# Hotel-ID nur beim ersten Start abfragen
 # ---------------------------------------------------------
 st.sidebar.title("Hotel auswählen")
 
+# Query-Parameter lesen (persistent)
+params = st.experimental_get_query_params()
+saved_hotel = params.get("hotel", [""])[0]
+
 # Session-State initialisieren
 if "hotel_id" not in st.session_state:
-    st.session_state.hotel_id = ""
+    st.session_state.hotel_id = saved_hotel
 
 # Wenn keine Hotel-ID gesetzt ist → Eingabefeld anzeigen
 if st.session_state.hotel_id == "":
-    hotel_input = st.sidebar.text_input("Hotel-ID eingeben (z. B. hotel1)")
+    hotel_input = st.sidebar.text_input("Hotel-ID eingeben (z. B. aro1)")
 
     if hotel_input:
         st.session_state.hotel_id = hotel_input.strip()
+        st.experimental_set_query_params(hotel=hotel_input.strip())
         st.rerun()
 
 # Wenn Hotel-ID gesetzt ist → anzeigen + Logout anbieten
@@ -74,6 +79,7 @@ else:
 
     if st.sidebar.button("Logout"):
         st.session_state.hotel_id = ""
+        st.experimental_set_query_params()  # Query-Parameter löschen
         st.rerun()
 
 hotel_id = st.session_state.hotel_id
