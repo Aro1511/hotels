@@ -52,13 +52,13 @@ show_logo_right()
 
 
 # ---------------------------------------------------------
-# Hotel-ID nur beim ersten Start abfragen
+# Hotel-ID nur beim ersten Start abfragen (neue Streamlit Syntax)
 # ---------------------------------------------------------
 st.sidebar.title("Hotel auswählen")
 
-# Query-Parameter lesen (persistent)
-params = st.experimental_get_query_params()
-saved_hotel = params.get("hotel", [""])[0]
+# Query-Parameter lesen
+params = st.query_params
+saved_hotel = params.get("hotel", "")
 
 # Session-State initialisieren
 if "hotel_id" not in st.session_state:
@@ -70,7 +70,7 @@ if st.session_state.hotel_id == "":
 
     if hotel_input:
         st.session_state.hotel_id = hotel_input.strip()
-        st.experimental_set_query_params(hotel=hotel_input.strip())
+        st.query_params = {"hotel": hotel_input.strip()}
         st.rerun()
 
 # Wenn Hotel-ID gesetzt ist → anzeigen + Logout anbieten
@@ -79,7 +79,7 @@ else:
 
     if st.sidebar.button("Logout"):
         st.session_state.hotel_id = ""
-        st.experimental_set_query_params()  # Query-Parameter löschen
+        st.query_params = {}  # Query-Parameter löschen
         st.rerun()
 
 hotel_id = st.session_state.hotel_id
@@ -139,7 +139,7 @@ def page_neuer_gast():
         "Preis pro Nacht (€)", min_value=0.0, step=1.0, format="%.2f"
     )
 
-    if st.button("Gast speichern"):
+    if st.button("Gast speichern", key="save_guest"):
         if not name:
             st.error("Name darf nicht leer sein.")
         else:
@@ -182,17 +182,18 @@ def display_guest_details(guest: Guest, editable: bool = True):
             cols[0].write(n.number)
             cols[1].write("Ja" if n.paid else "Nein")
 
+            # EINDEUTIGE KEYS!
             if editable:
                 if n.paid:
                     if cols[2].button(
-                        f"Auf unbezahlte setzen #{guest.id}-{n.number}",
+                        "Auf unbezahlte setzen",
                         key=f"unpaid_{guest.id}_{n.number}",
                     ):
                         set_night_paid_status(hotel_id, guest.id, n.number, False)
                         st.rerun()
                 else:
                     if cols[2].button(
-                        f"Als bezahlt markieren #{guest.id}-{n.number}",
+                        "Als bezahlt markieren",
                         key=f"paid_{guest.id}_{n.number}",
                     ):
                         set_night_paid_status(hotel_id, guest.id, n.number, True)
@@ -210,15 +211,16 @@ def display_guest_details(guest: Guest, editable: bool = True):
         data=csv_data,
         file_name=f"beleg_{guest.name.replace(' ', '_')}.csv",
         mime="text/csv",
+        key=f"download_{guest.id}",
     )
 
     if editable:
         st.markdown("### Nächte hinzufügen")
         col_add1, col_add2 = st.columns(2)
         with col_add1:
-            add_paid = st.button("Bezahlte Nacht hinzufügen")
+            add_paid = st.button("Bezahlte Nacht hinzufügen", key=f"add_paid_{guest.id}")
         with col_add2:
-            add_unpaid = st.button("Unbezahlte Nacht hinzufügen")
+            add_unpaid = st.button("Unbezahlte Nacht hinzufügen", key=f"add_unpaid_{guest.id}")
 
         if add_paid:
             add_night_to_guest(hotel_id, guest.id, paid=True)
@@ -230,7 +232,7 @@ def display_guest_details(guest: Guest, editable: bool = True):
 
         st.markdown("### Gast-Aktionen")
         if guest.status == "checked_in":
-            if st.button("Checkout durchführen"):
+            if st.button("Checkout durchführen", key=f"checkout_{guest.id}"):
                 checkout_guest(hotel_id, guest.id)
                 st.success("Gast wurde ausgecheckt.")
                 st.rerun()
@@ -249,7 +251,7 @@ def page_gaesteliste():
         return
 
     for guest in guests:
-        with st.expander(f"{guest.name} (ID: {guest.id})"):
+        with st.expander(f"{guest.name} (ID: {guest.id})", expanded=False):
             display_guest_details(guest, editable=True)
 
 
@@ -258,8 +260,8 @@ def page_gaesteliste():
 # ---------------------------------------------------------
 def page_suche():
     st.header("Gäste suchen")
-    query = st.text_input("Name (oder Teil des Namens)")
-    include_checked_out = st.checkbox("Auch ausgecheckte Gäste anzeigen", value=False)
+    query = st.text_input("Name (oder Teil des Namens)", key="search_input")
+    include_checked_out = st.checkbox("Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox")
 
     if query:
         results = search_guests_by_name(hotel_id, query)
@@ -285,13 +287,13 @@ def page_zimmerverwaltung():
     st.subheader("Neues Zimmer hinzufügen")
     col1, col2 = st.columns(2)
     with col1:
-        number = st.number_input("Zimmernummer", min_value=1, step=1)
+        number = st.number_input("Zimmernummer", min_value=1, step=1, key="room_number")
     with col2:
         category = st.selectbox(
-            "Kategorie", ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"]
+            "Kategorie", ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"], key="room_category"
         )
 
-    if st.button("Zimmer speichern"):
+    if st.button("Zimmer speichern", key="save_room"):
         try:
             add_room(hotel_id, int(number), category)
             st.success(f"Zimmer {int(number)} hinzugefügt.")
@@ -340,6 +342,7 @@ def main():
     page = st.sidebar.radio(
         "Seite auswählen",
         ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout"),
+        key="nav_radio"
     )
 
     if page == "Neuer Gast":
