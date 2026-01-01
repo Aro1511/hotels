@@ -13,6 +13,7 @@ from logic import (
     search_guests_by_name,
     list_all_guests,
     checkout_guest,
+    delete_guest,  # <-- NEU: Gast löschen
 )
 from database import load_rooms
 from models import Guest
@@ -52,19 +53,16 @@ show_logo_right()
 
 
 # ---------------------------------------------------------
-# Hotel-ID nur beim ersten Start abfragen (neue Streamlit Syntax)
+# Hotel-ID nur beim ersten Start abfragen
 # ---------------------------------------------------------
 st.sidebar.title("Hotel auswählen")
 
-# Query-Parameter lesen
 params = st.query_params
 saved_hotel = params.get("hotel", "")
 
-# Session-State initialisieren
 if "hotel_id" not in st.session_state:
     st.session_state.hotel_id = saved_hotel
 
-# Wenn keine Hotel-ID gesetzt ist → Eingabefeld anzeigen
 if st.session_state.hotel_id == "":
     hotel_input = st.sidebar.text_input("Hotel-ID eingeben (z. B. aro1)")
 
@@ -73,18 +71,16 @@ if st.session_state.hotel_id == "":
         st.query_params = {"hotel": hotel_input.strip()}
         st.rerun()
 
-# Wenn Hotel-ID gesetzt ist → anzeigen + Logout anbieten
 else:
     st.sidebar.success(f"Hotel: {st.session_state.hotel_id}")
 
     if st.sidebar.button("Logout"):
         st.session_state.hotel_id = ""
-        st.query_params = {}  # Query-Parameter löschen
+        st.query_params = {}
         st.rerun()
 
 hotel_id = st.session_state.hotel_id
 
-# Wenn weiterhin keine ID → App stoppen
 if hotel_id == "":
     st.warning("Bitte eine Hotel-ID eingeben, um fortzufahren.")
     st.stop()
@@ -126,6 +122,22 @@ def export_receipt_csv(guest: Guest):
 def page_neuer_gast():
     st.header("Neuen Gast anlegen")
 
+    # -------------------------
+    # Formular verstecken / anzeigen
+    # -------------------------
+    if "form_hidden" not in st.session_state:
+        st.session_state.form_hidden = False
+
+    if st.session_state.form_hidden:
+        st.success("Gast wurde erfolgreich gespeichert.")
+        if st.button("Neuen Gast anlegen"):
+            st.session_state.form_hidden = False
+            st.rerun()
+        return
+
+    # -------------------------
+    # Formular anzeigen
+    # -------------------------
     name = st.text_input("Name des Gastes")
     col1, col2 = st.columns(2)
     with col1:
@@ -151,7 +163,7 @@ def page_neuer_gast():
                     room_category=room_category,
                     price_per_night=float(price_per_night),
                 )
-                st.success(f"Gast {guest.name} (ID: {guest.id}) wurde angelegt.")
+                st.session_state.form_hidden = True
                 st.rerun()
             except Exception as e:
                 st.error(str(e))
@@ -182,7 +194,6 @@ def display_guest_details(guest: Guest, editable: bool = True):
             cols[0].write(n.number)
             cols[1].write("Ja" if n.paid else "Nein")
 
-            # EINDEUTIGE KEYS!
             if editable:
                 if n.paid:
                     if cols[2].button(
@@ -330,6 +341,12 @@ def page_checkout():
     for guest in checked_out:
         with st.expander(f"{guest.name} (ID: {guest.id})"):
             display_guest_details(guest, editable=False)
+
+            st.markdown("---")
+            if st.button("Gast löschen", key=f"delete_{guest.id}"):
+                delete_guest(hotel_id, guest.id)
+                st.success("Gast wurde gelöscht.")
+                st.rerun()
 
 
 # ---------------------------------------------------------

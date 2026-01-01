@@ -10,6 +10,7 @@ from database import load_guests, save_guests, load_rooms, save_rooms
 # ---------------------------------------------------------
 
 def _get_next_guest_id(guests: List[Guest]) -> int:
+    """Ermittelt die nächste freie Gast-ID."""
     if not guests:
         return 1
     return max(g.id for g in guests) + 1
@@ -65,6 +66,7 @@ def add_guest(
 
     room = get_room(hotel_id, room_number)
 
+    # Zimmer existiert nicht → automatisch anlegen
     if room is None:
         room = Room(number=room_number, category=room_category, occupied=False)
         rooms.append(room)
@@ -90,6 +92,7 @@ def add_guest(
     guests.append(guest)
     save_guests(hotel_id, guests)
 
+    # Zimmer belegen
     room.occupied = True
     save_rooms(hotel_id, rooms)
 
@@ -178,11 +181,48 @@ def checkout_guest(hotel_id: str, guest_id: int) -> None:
             g.status = "checked_out"
             g.checkout_date = today
 
+            # Zimmer freigeben
             for r in rooms:
                 if r.number == g.room_number:
                     r.occupied = False
                     break
             break
+
+    save_guests(hotel_id, guests)
+    save_rooms(hotel_id, rooms)
+
+
+# ---------------------------------------------------------
+# NEU: Gast löschen
+# ---------------------------------------------------------
+
+def delete_guest(hotel_id: str, guest_id: int) -> None:
+    """
+    Löscht einen Gast vollständig aus der Datenbank.
+    Falls das Zimmer noch belegt ist → wird es freigegeben.
+    """
+
+    guests = load_guests(hotel_id)
+    rooms = load_rooms(hotel_id)
+
+    guest_to_delete = None
+
+    for g in guests:
+        if g.id == guest_id:
+            guest_to_delete = g
+            break
+
+    if guest_to_delete is None:
+        raise ValueError("Gast nicht gefunden")
+
+    # Zimmer freigeben
+    for r in rooms:
+        if r.number == guest_to_delete.room_number:
+            r.occupied = False
+            break
+
+    # Gast entfernen
+    guests = [g for g in guests if g.id != guest_id]
 
     save_guests(hotel_id, guests)
     save_rooms(hotel_id, rooms)
