@@ -1,5 +1,2 @@
 streamlit
 requests
-firebase-admin
-Pillow
-python-dateutil
