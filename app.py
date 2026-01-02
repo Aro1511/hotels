@@ -13,10 +13,14 @@ from logic import (
     search_guests_by_name,
     list_all_guests,
     checkout_guest,
-    delete_guest,  # <-- NEU: Gast löschen
+    delete_guest,
 )
 from database import load_rooms
 from models import Guest
+
+# 🔐 Login-System
+from auth import get_user, verify_password
+from admin import admin_page
 
 
 # ---------------------------------------------------------
@@ -26,7 +30,35 @@ st.set_page_config(page_title="Hotelverwaltung", layout="wide")
 
 
 # ---------------------------------------------------------
-# Logo anzeigen (rechts oben)
+# LOGIN
+# ---------------------------------------------------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("Hotel Login")
+
+    hotel_id_input = st.text_input("Hotel-ID")
+    password_input = st.text_input("Passwort", type="password")
+
+    if st.button("Login"):
+        user = get_user(hotel_id_input)
+
+        if user and verify_password(password_input, user["password_hash"]):
+            st.session_state.authenticated = True
+            st.session_state.hotel_id = hotel_id_input
+            st.rerun()
+        else:
+            st.error("Hotel-ID oder Passwort falsch.")
+
+    st.stop()
+
+
+hotel_id = st.session_state.hotel_id
+
+
+# ---------------------------------------------------------
+# Logo anzeigen
 # ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
@@ -47,43 +79,9 @@ def show_logo_right():
             unsafe_allow_html=True,
         )
     except Exception:
-        st.warning("Logo konnte nicht geladen werden. Stelle sicher, dass 'logo.png' im Projektordner liegt.")
+        st.warning("Logo konnte nicht geladen werden.")
 
 show_logo_right()
-
-
-# ---------------------------------------------------------
-# Hotel-ID nur beim ersten Start abfragen
-# ---------------------------------------------------------
-st.sidebar.title("Hotel auswählen")
-
-params = st.query_params
-saved_hotel = params.get("hotel", "")
-
-if "hotel_id" not in st.session_state:
-    st.session_state.hotel_id = saved_hotel
-
-if st.session_state.hotel_id == "":
-    hotel_input = st.sidebar.text_input("Hotel-ID eingeben (z. B. aro1)")
-
-    if hotel_input:
-        st.session_state.hotel_id = hotel_input.strip()
-        st.query_params = {"hotel": hotel_input.strip()}
-        st.rerun()
-
-else:
-    st.sidebar.success(f"Hotel: {st.session_state.hotel_id}")
-
-    if st.sidebar.button("Logout"):
-        st.session_state.hotel_id = ""
-        st.query_params = {}
-        st.rerun()
-
-hotel_id = st.session_state.hotel_id
-
-if hotel_id == "":
-    st.warning("Bitte eine Hotel-ID eingeben, um fortzufahren.")
-    st.stop()
 
 
 # ---------------------------------------------------------
@@ -122,9 +120,6 @@ def export_receipt_csv(guest: Guest):
 def page_neuer_gast():
     st.header("Neuen Gast anlegen")
 
-    # -------------------------
-    # Formular verstecken / anzeigen
-    # -------------------------
     if "form_hidden" not in st.session_state:
         st.session_state.form_hidden = False
 
@@ -135,9 +130,6 @@ def page_neuer_gast():
             st.rerun()
         return
 
-    # -------------------------
-    # Formular anzeigen
-    # -------------------------
     name = st.text_input("Name des Gastes")
     col1, col2 = st.columns(2)
     with col1:
@@ -275,7 +267,7 @@ def page_suche():
     include_checked_out = st.checkbox("Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox")
 
     if query:
-        results = search_guests_by_name(hotel_id, query)
+        results = search_guests_by_name(hhotel_id, query)
 
         if not include_checked_out:
             results = [g for g in results if g.status == "checked_in"]
@@ -358,7 +350,7 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Seite auswählen",
-        ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout"),
+        ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout", "Admin"),
         key="nav_radio"
     )
 
@@ -372,6 +364,8 @@ def main():
         page_zimmerverwaltung()
     elif page == "Checkout":
         page_checkout()
+    elif page == "Admin":
+        admin_page()
 
 
 if __name__ == "__main__":
