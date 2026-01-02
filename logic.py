@@ -8,9 +8,7 @@ from database import load_guests, save_guests, load_rooms, save_rooms
 # ---------------------------------------------------------
 # Hilfsfunktionen für IDs
 # ---------------------------------------------------------
-
 def _get_next_guest_id(guests: List[Guest]) -> int:
-    """Ermittelt die nächste freie Gast-ID."""
     if not guests:
         return 1
     return max(g.id for g in guests) + 1
@@ -19,7 +17,6 @@ def _get_next_guest_id(guests: List[Guest]) -> int:
 # ---------------------------------------------------------
 # Zimmer-Funktionen
 # ---------------------------------------------------------
-
 def add_room(hotel_id: str, number: int, category: str) -> None:
     rooms = load_rooms(hotel_id)
 
@@ -52,7 +49,6 @@ def get_room(hotel_id: str, room_number: int) -> Optional[Room]:
 # ---------------------------------------------------------
 # Gäste-Funktionen
 # ---------------------------------------------------------
-
 def add_guest(
     hotel_id: str,
     name: str,
@@ -60,7 +56,6 @@ def add_guest(
     room_category: str,
     price_per_night: float,
 ) -> Guest:
-
     guests = load_guests(hotel_id)
     rooms = load_rooms(hotel_id)
 
@@ -131,7 +126,9 @@ def add_night_to_guest(hotel_id: str, guest_id: int, paid: bool) -> Guest:
     raise ValueError("Gast nicht gefunden")
 
 
-def set_night_paid_status(hotel_id: str, guest_id: int, night_number: int, paid: bool) -> Guest:
+def set_night_paid_status(
+    hotel_id: str, guest_id: int, night_number: int, paid: bool
+) -> Guest:
     guest = get_guest_by_id(hotel_id, guest_id)
     if not guest:
         raise ValueError("Gast nicht gefunden")
@@ -192,16 +189,7 @@ def checkout_guest(hotel_id: str, guest_id: int) -> None:
     save_rooms(hotel_id, rooms)
 
 
-# ---------------------------------------------------------
-# NEU: Gast löschen
-# ---------------------------------------------------------
-
 def delete_guest(hotel_id: str, guest_id: int) -> None:
-    """
-    Löscht einen Gast vollständig aus der Datenbank.
-    Falls das Zimmer noch belegt ist → wird es freigegeben.
-    """
-
     guests = load_guests(hotel_id)
     rooms = load_rooms(hotel_id)
 
@@ -221,7 +209,6 @@ def delete_guest(hotel_id: str, guest_id: int) -> None:
             r.occupied = False
             break
 
-    # Gast entfernen
     guests = [g for g in guests if g.id != guest_id]
 
     save_guests(hotel_id, guests)

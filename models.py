@@ -38,7 +38,7 @@ class Room:
 
 
 # ---------------------------------------------------------
-# Konvertierung: Guest → dict (für Firebase)
+# Konvertierung: Guest → dict
 # ---------------------------------------------------------
 def guest_to_dict(guest: Guest) -> dict:
     return {
@@ -55,15 +55,14 @@ def guest_to_dict(guest: Guest) -> dict:
 
 
 # ---------------------------------------------------------
-# Konvertierung: dict → Guest (aus Firebase)
+# Konvertierung: dict → Guest
 # ---------------------------------------------------------
 def guest_from_dict(data: dict) -> Guest:
-    # defensive defaults, falls Firebase-Daten unvollständig sind
     nights_raw = data.get("nights", [])
     nights = [
         Night(
             number=n.get("number", 0),
-            paid=n.get("paid", False)
+            paid=n.get("paid", False),
         )
         for n in nights_raw
     ]

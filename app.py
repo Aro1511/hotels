@@ -42,6 +42,7 @@ def image_to_base64(img):
     img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
 
+
 def show_logo_right():
     try:
         logo = Image.open("logo.png")
@@ -57,6 +58,7 @@ def show_logo_right():
         )
     except Exception:
         st.warning("Logo konnte nicht geladen werden.")
+
 
 show_logo_right()
 
@@ -200,7 +202,9 @@ def display_guest_details(guest: Guest, editable: bool = True):
         with col_add1:
             add_paid = st.button("Bezahlte Nacht hinzufügen", key=f"add_paid_{guest.id}")
         with col_add2:
-            add_unpaid = st.button("Unbezahlte Nacht hinzufügen", key=f"add_unpaid_{guest.id}")
+            add_unpaid = st.button(
+                "Unbezahlte Nacht hinzufügen", key=f"add_unpaid_{guest.id}"
+            )
 
         if add_paid:
             add_night_to_guest(hotel_id, guest.id, paid=True)
@@ -241,7 +245,9 @@ def page_gaesteliste():
 def page_suche():
     st.header("Gäste suchen")
     query = st.text_input("Name (oder Teil des Namens)", key="search_input")
-    include_checked_out = st.checkbox("Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox")
+    include_checked_out = st.checkbox(
+        "Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox"
+    )
 
     if query:
         results = search_guests_by_name(hotel_id, query)
@@ -267,10 +273,14 @@ def page_zimmerverwaltung():
     st.subheader("Neues Zimmer hinzufügen")
     col1, col2 = st.columns(2)
     with col1:
-        number = st.number_input("Zimmernummer", min_value=1, step=1, key="room_number")
+        number = st.number_input(
+            "Zimmernummer", min_value=1, step=1, key="room_number"
+        )
     with col2:
         category = st.selectbox(
-            "Kategorie", ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"], key="room_category"
+            "Kategorie",
+            ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"],
+            key="room_category",
         )
 
     if st.button("Zimmer speichern", key="save_room"):
@@ -328,7 +338,7 @@ def main():
     page = st.sidebar.radio(
         "Seite auswählen",
         ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout"),
-        key="nav_radio"
+        key="nav_radio",
     )
 
     if page == "Neuer Gast":
