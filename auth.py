@@ -1,21 +1,39 @@
-import bcrypt
+import hashlib
+import os
 from firebase_admin import firestore
 
 db = firestore.client()
+
+
+def _hash_password(password: str, salt: str) -> str:
+    """
+    Erzeugt einen Hash aus Passwort + Salt.
+    Format: salt$hash
+    """
+    h = hashlib.sha256()
+    h.update((salt + password).encode("utf-8"))
+    return h.hexdigest()
+
 
 # ---------------------------------------------------------
 # 1. Benutzer anlegen (Hotel registrieren)
 # ---------------------------------------------------------
 def create_user(hotel_id: str, password: str):
+    """
+    Legt ein neues Hotel mit Passwort an.
+    Passwort wird als salt$hash gespeichert.
+    """
     doc_ref = db.collection("users").document(hotel_id)
 
     if doc_ref.get().exists:
         raise ValueError("Hotel-ID existiert bereits!")
 
-    password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    salt = os.urandom(16).hex()
+    password_hash = _hash_password(password, salt)
+    stored_value = f"{salt}${password_hash}"
 
     doc_ref.set({
-        "password_hash": password_hash
+        "password_hash": stored_value
     })
 
 
@@ -32,8 +50,17 @@ def get_user(hotel_id: str):
 # ---------------------------------------------------------
 # 3. Passwort prüfen
 # ---------------------------------------------------------
-def verify_password(password: str, password_hash: str) -> bool:
-    return bcrypt.checkpw(password.encode(), password_hash.encode())
+def verify_password(password: str, stored: str) -> bool:
+    """
+    stored hat das Format: salt$hash
+    """
+    try:
+        salt, correct_hash = stored.split("$", 1)
+    except ValueError:
+        return False
+
+    test_hash = _hash_password(password, salt)
+    return test_hash == correct_hash
 
 
 # ---------------------------------------------------------
@@ -45,10 +72,12 @@ def update_password(hotel_id: str, new_password: str):
     if not doc_ref.get().exists:
         raise ValueError("Hotel-ID existiert nicht!")
 
-    new_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    salt = os.urandom(16).hex()
+    password_hash = _hash_password(new_password, salt)
+    stored_value = f"{salt}${password_hash}"
 
     doc_ref.update({
-        "password_hash": new_hash
+        "password_hash": stored_value
     })
 
 

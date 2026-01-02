@@ -267,7 +267,7 @@ def page_suche():
     include_checked_out = st.checkbox("Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox")
 
     if query:
-        results = search_guests_by_name(hhotel_id, query)
+        results = search_guests_by_name(hotel_id, query)
 
         if not include_checked_out:
             results = [g for g in results if g.status == "checked_in"]
