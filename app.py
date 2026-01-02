@@ -18,9 +18,6 @@ from logic import (
 from database import load_rooms
 from models import Guest
 
-# von auth import get_user, verify_password  -> ENTFERNT
-from admin import admin_page
-
 
 # ---------------------------------------------------------
 # Grundkonfiguration
@@ -31,8 +28,6 @@ st.set_page_config(page_title="Hotelverwaltung", layout="wide")
 # ---------------------------------------------------------
 # HOTEL-ID (ohne Login)
 # ---------------------------------------------------------
-# Da es kein Login mehr gibt, setzen wir eine feste Hotel-ID.
-# Wenn du willst, kannst du das später wieder dynamisch machen.
 if "hotel_id" not in st.session_state:
     st.session_state.hotel_id = "default_hotel"
 
@@ -130,7 +125,7 @@ def page_neuer_gast():
             st.error("Name darf nicht leer sein.")
         else:
             try:
-                guest = add_guest(
+                add_guest(
                     hotel_id,
                     name=name,
                     room_number=int(room_number),
@@ -332,7 +327,7 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Seite auswählen",
-        ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout", "Admin"),
+        ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout"),
         key="nav_radio"
     )
 
@@ -346,8 +341,6 @@ def main():
         page_zimmerverwaltung()
     elif page == "Checkout":
         page_checkout()
-    elif page == "Admin":
-        admin_page()
 
 
 if __name__ == "__main__":
