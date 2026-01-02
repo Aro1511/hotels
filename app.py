@@ -18,6 +18,7 @@ from logic import (
 from database import load_rooms
 from models import Guest
 
+# von auth import get_user, verify_password  -> ENTFERNT
 from admin import admin_page
 
 
@@ -25,6 +26,17 @@ from admin import admin_page
 # Grundkonfiguration
 # ---------------------------------------------------------
 st.set_page_config(page_title="Hotelverwaltung", layout="wide")
+
+
+# ---------------------------------------------------------
+# HOTEL-ID (ohne Login)
+# ---------------------------------------------------------
+# Da es kein Login mehr gibt, setzen wir eine feste Hotel-ID.
+# Wenn du willst, kannst du das später wieder dynamisch machen.
+if "hotel_id" not in st.session_state:
+    st.session_state.hotel_id = "default_hotel"
+
+hotel_id = st.session_state.hotel_id
 
 
 # ---------------------------------------------------------
@@ -119,7 +131,7 @@ def page_neuer_gast():
         else:
             try:
                 guest = add_guest(
-                    "default_hotel",
+                    hotel_id,
                     name=name,
                     room_number=int(room_number),
                     room_category=room_category,
@@ -162,14 +174,14 @@ def display_guest_details(guest: Guest, editable: bool = True):
                         "Auf unbezahlte setzen",
                         key=f"unpaid_{guest.id}_{n.number}",
                     ):
-                        set_night_paid_status("default_hotel", guest.id, n.number, False)
+                        set_night_paid_status(hotel_id, guest.id, n.number, False)
                         st.rerun()
                 else:
                     if cols[2].button(
                         "Als bezahlt markieren",
                         key=f"paid_{guest.id}_{n.number}",
                     ):
-                        set_night_paid_status("default_hotel", guest.id, n.number, True)
+                        set_night_paid_status(hotel_id, guest.id, n.number, True)
                         st.rerun()
 
     paid_count, unpaid_count, sum_paid, sum_unpaid = calculate_nights_summary(guest)
@@ -196,17 +208,17 @@ def display_guest_details(guest: Guest, editable: bool = True):
             add_unpaid = st.button("Unbezahlte Nacht hinzufügen", key=f"add_unpaid_{guest.id}")
 
         if add_paid:
-            add_night_to_guest("default_hotel", guest.id, paid=True)
+            add_night_to_guest(hotel_id, guest.id, paid=True)
             st.rerun()
 
         if add_unpaid:
-            add_night_to_guest("default_hotel", guest.id, paid=False)
+            add_night_to_guest(hotel_id, guest.id, paid=False)
             st.rerun()
 
         st.markdown("### Gast-Aktionen")
         if guest.status == "checked_in":
             if st.button("Checkout durchführen", key=f"checkout_{guest.id}"):
-                checkout_guest("default_hotel", guest.id)
+                checkout_guest(hotel_id, guest.id)
                 st.success("Gast wurde ausgecheckt.")
                 st.rerun()
 
@@ -217,7 +229,7 @@ def display_guest_details(guest: Guest, editable: bool = True):
 def page_gaesteliste():
     st.header("Liste der Gäste")
 
-    guests = list_all_guests("default_hotel", include_checked_out=False)
+    guests = list_all_guests(hotel_id, include_checked_out=False)
 
     if not guests:
         st.info("Keine Gäste vorhanden.")
@@ -237,7 +249,7 @@ def page_suche():
     include_checked_out = st.checkbox("Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox")
 
     if query:
-        results = search_guests_by_name("default_hotel", query)
+        results = search_guests_by_name(hotel_id, query)
 
         if not include_checked_out:
             results = [g for g in results if g.status == "checked_in"]
@@ -268,14 +280,14 @@ def page_zimmerverwaltung():
 
     if st.button("Zimmer speichern", key="save_room"):
         try:
-            add_room("default_hotel", int(number), category)
+            add_room(hotel_id, int(number), category)
             st.success(f"Zimmer {int(number)} hinzugefügt.")
             st.rerun()
         except Exception as e:
             st.error(str(e))
 
     st.subheader("Vorhandene Zimmer")
-    rooms = load_rooms("default_hotel")
+    rooms = load_rooms(hotel_id)
 
     if not rooms:
         st.info("Noch keine Zimmer vorhanden.")
@@ -293,7 +305,7 @@ def page_zimmerverwaltung():
 def page_checkout():
     st.header("Ausgecheckte Gäste")
 
-    guests = list_all_guests("default_hotel", include_checked_out=True)
+    guests = list_all_guests(hotel_id, include_checked_out=True)
     checked_out = [g for g in guests if g.status == "checked_out"]
 
     if not checked_out:
@@ -306,7 +318,7 @@ def page_checkout():
 
             st.markdown("---")
             if st.button("Gast löschen", key=f"delete_{guest.id}"):
-                delete_guest("default_hotel", guest.id)
+                delete_guest(hotel_id, guest.id)
                 st.success("Gast wurde gelöscht.")
                 st.rerun()
 
