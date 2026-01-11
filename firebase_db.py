@@ -6,9 +6,16 @@ from firebase_admin import credentials, firestore
 # ---------------------------------------------------------
 # Firestore-Initialisierung über Streamlit Secrets
 # ---------------------------------------------------------
+# Secrets laden
+firebase_secrets = st.secrets["firebase"]
+
+# WICHTIG: Streamlit liefert ein SectionProxy-Objekt.
+# Firebase braucht aber ein echtes Python-Dict.
+firebase_creds = dict(firebase_secrets)
+
+# Firebase-App nur einmal initialisieren
 if not firebase_admin._apps:
-    firebase_secrets = st.secrets["firebase"]
-    cred = credentials.Certificate(firebase_secrets)
+    cred = credentials.Certificate(firebase_creds)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
@@ -16,13 +23,6 @@ db = firestore.client()
 
 # ---------------------------------------------------------
 # Hilfsfunktionen: JSON-ähnliche Daten über Firestore speichern/laden
-# ---------------------------------------------------------
-# Wir emulieren die alte RTDB-Struktur:
-#   path = f"{hotel_id}/gaeste" oder f"{hotel_id}/raeume"
-# In Firestore speichern wir das unter:
-#   Collection: "hotel_app"
-#   Document: path (z.B. "default_hotel/gaeste")
-#   Feld: "data" -> Liste der Objekte
 # ---------------------------------------------------------
 def load_json(path: str):
     """
