@@ -6,14 +6,9 @@ from firebase_admin import credentials, firestore
 # ---------------------------------------------------------
 # Firestore-Initialisierung über Streamlit Secrets
 # ---------------------------------------------------------
-# Secrets laden
 firebase_secrets = st.secrets["firebase"]
-
-# WICHTIG: Streamlit liefert ein SectionProxy-Objekt.
-# Firebase braucht aber ein echtes Python-Dict.
 firebase_creds = dict(firebase_secrets)
 
-# Firebase-App nur einmal initialisieren
 if not firebase_admin._apps:
     cred = credentials.Certificate(firebase_creds)
     firebase_admin.initialize_app(cred)
@@ -22,16 +17,23 @@ db = firestore.client()
 
 
 # ---------------------------------------------------------
-# Hilfsfunktionen: JSON-ähnliche Daten über Firestore speichern/laden
+# Firestore-Struktur:
+# hotel_app (Collection)
+#   └── <hotel_id> (Document)
+#         └── <subpath> (Collection: "gaeste" oder "raeume")
+#               └── data (Document)
 # ---------------------------------------------------------
-def load_json(path: str):
-    """
-    Lädt eine Liste von Objekten aus Firestore.
 
-    path: z.B. "default_hotel/gaeste" oder "default_hotel/raeume"
-    Rückgabe: Liste (oder leere Liste, wenn nichts vorhanden)
-    """
-    doc_ref = db.collection("hotel_app").document(path)
+def load_json(path: str):
+    hotel_id, subpath = path.split("/")  # z.B. "default_hotel", "gaeste"
+
+    doc_ref = (
+        db.collection("hotel_app")
+          .document(hotel_id)
+          .collection(subpath)
+          .document("data")
+    )
+
     doc = doc_ref.get()
     if doc.exists:
         data = doc.to_dict().get("data")
@@ -41,11 +43,13 @@ def load_json(path: str):
 
 
 def save_json(path: str, data):
-    """
-    Speichert eine Liste von Objekten in Firestore.
+    hotel_id, subpath = path.split("/")
 
-    path: z.B. "default_hotel/gaeste" oder "default_hotel/raeume"
-    data: Liste von dicts
-    """
-    doc_ref = db.collection("hotel_app").document(path)
+    doc_ref = (
+        db.collection("hotel_app")
+          .document(hotel_id)
+          .collection(subpath)
+          .document("data")
+    )
+
     doc_ref.set({"data": data})
