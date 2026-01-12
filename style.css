@@ -1,6 +1,28 @@
 /* ---------------------------------------------------------
    GLOBAL STYLE – Warm & Friendly Modern UI
 --------------------------------------------------------- */
+/* ================================
+   Streamlit UI verstecken / clean UI
+   ================================ */
+
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+.stApp {
+    background-color: transparent;
+}
+
+.block-container {
+    padding-top: 1rem;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Optional: Hintergrund komplett entfernen */
+.css-18e3th9, .css-1d391kg {
+    padding-top: 0;
+}
 
 /* Gesamter Hintergrund */
 body, .stApp {
