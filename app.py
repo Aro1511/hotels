@@ -20,6 +20,19 @@ from models import Guest
 
 
 # ---------------------------------------------------------
+# CSS laden
+# ---------------------------------------------------------
+def load_css():
+    try:
+        with open("style.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception:
+        st.warning("Konnte style.css nicht laden.")
+
+load_css()
+
+
+# ---------------------------------------------------------
 # Grundkonfiguration
 # ---------------------------------------------------------
 st.set_page_config(page_title="Hotelverwaltung", layout="wide")
@@ -35,7 +48,7 @@ hotel_id = st.session_state.hotel_id
 
 
 # ---------------------------------------------------------
-# Logo anzeigen
+# Logo laden
 # ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
@@ -43,15 +56,31 @@ def image_to_base64(img):
     return base64.b64encode(buffer.getvalue()).decode()
 
 
-def show_logo_right():
+# ---------------------------------------------------------
+# Moderner Header
+# ---------------------------------------------------------
+def show_modern_header():
     try:
         logo = Image.open("logo.png")
         encoded = image_to_base64(logo)
 
         st.markdown(
             f"""
-            <div style="width: 100%; text-align: right; margin-top: 5px; margin-bottom: 5px;">
-                <img src="data:image/png;base64,{encoded}" style="width: 180px;">
+            <div style="
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 15px 20px;
+                background-color: #F5D7B2;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                margin-bottom: 25px;
+            ">
+                <h1 style="margin: 0; color: #8B4513; font-weight: 700;">
+                    Hotelverwaltung
+                </h1>
+                <img src="data:image/png;base64,{encoded}" style="width: 140px;">
             </div>
             """,
             unsafe_allow_html=True,
@@ -59,8 +88,7 @@ def show_logo_right():
     except Exception:
         st.warning("Logo konnte nicht geladen werden.")
 
-
-show_logo_right()
+show_modern_header()
 
 
 # ---------------------------------------------------------
@@ -109,7 +137,10 @@ def page_neuer_gast():
             st.rerun()
         return
 
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+
     name = st.text_input("Name des Gastes")
+
     col1, col2 = st.columns(2)
     with col1:
         room_number = st.number_input("Zimmernummer", min_value=1, step=1)
@@ -121,6 +152,8 @@ def page_neuer_gast():
     price_per_night = st.number_input(
         "Preis pro Nacht (€)", min_value=0.0, step=1.0, format="%.2f"
     )
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if st.button("Gast speichern", key="save_guest"):
         if not name:
@@ -144,6 +177,8 @@ def page_neuer_gast():
 # Gastdetails anzeigen
 # ---------------------------------------------------------
 def display_guest_details(guest: Guest, editable: bool = True):
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+
     st.write(f"**Zimmer:** {guest.room_number} ({guest.room_category})")
     st.write(f"**Preis pro Nacht:** {guest.price_per_night:.2f} €")
     st.write(f"**Check-in:** {guest.checkin_date}")
@@ -221,6 +256,8 @@ def display_guest_details(guest: Guest, editable: bool = True):
                 st.success("Gast wurde ausgecheckt.")
                 st.rerun()
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # ---------------------------------------------------------
 # Seite: Gästeliste
@@ -235,8 +272,16 @@ def page_gaesteliste():
         return
 
     for guest in guests:
-        with st.expander(f"{guest.name} (ID: {guest.id})", expanded=False):
-            display_guest_details(guest, editable=True)
+        st.markdown(f"""
+        <div class="card">
+            <h3 style="margin-bottom: 5px;">{guest.name}</h3>
+            <p><b>ID:</b> {guest.id}</p>
+            <p><b>Zimmer:</b> {guest.room_number} ({guest.room_category})</p>
+            <p><b>Status:</b> {guest.status}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        display_guest_details(guest, editable=True)
 
 
 # ---------------------------------------------------------
@@ -244,10 +289,13 @@ def page_gaesteliste():
 # ---------------------------------------------------------
 def page_suche():
     st.header("Gäste suchen")
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     query = st.text_input("Name (oder Teil des Namens)", key="search_input")
     include_checked_out = st.checkbox(
         "Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox"
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if query:
         results = search_guests_by_name(hotel_id, query)
@@ -260,8 +308,15 @@ def page_suche():
             return
 
         for guest in results:
-            with st.expander(f"{guest.name} (ID: {guest.id})"):
-                display_guest_details(guest, editable=True)
+            st.markdown(f"""
+            <div class="card">
+                <h3>{guest.name}</h3>
+                <p><b>ID:</b> {guest.id}</p>
+                <p><b>Zimmer:</b> {guest.room_number}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            display_guest_details(guest, editable=True)
 
 
 # ---------------------------------------------------------
@@ -269,6 +324,8 @@ def page_suche():
 # ---------------------------------------------------------
 def page_zimmerverwaltung():
     st.header("Zimmerverwaltung")
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
     st.subheader("Neues Zimmer hinzufügen")
     col1, col2 = st.columns(2)
@@ -291,6 +348,8 @@ def page_zimmerverwaltung():
         except Exception as e:
             st.error(str(e))
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
     st.subheader("Vorhandene Zimmer")
     rooms = load_rooms(hotel_id)
 
@@ -298,10 +357,13 @@ def page_zimmerverwaltung():
         st.info("Noch keine Zimmer vorhanden.")
     else:
         for r in rooms:
-            st.write(
-                f"Zimmer {r.number} – {r.category} – "
-                f"{'Belegt' if r.occupied else 'Frei'}"
-            )
+            st.markdown(f"""
+            <div class="card">
+                <p><b>Zimmer:</b> {r.number}</p>
+                <p><b>Kategorie:</b> {r.category}</p>
+                <p><b>Status:</b> {"Belegt" if r.occupied else "Frei"}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
@@ -318,22 +380,27 @@ def page_checkout():
         return
 
     for guest in checked_out:
-        with st.expander(f"{guest.name} (ID: {guest.id})"):
-            display_guest_details(guest, editable=False)
+        st.markdown(f"""
+        <div class="card">
+            <h3>{guest.name}</h3>
+            <p><b>ID:</b> {guest.id}</p>
+            <p><b>Zimmer:</b> {guest.room_number}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-            st.markdown("---")
-            if st.button("Gast löschen", key=f"delete_{guest.id}"):
-                delete_guest(hotel_id, guest.id)
-                st.success("Gast wurde gelöscht.")
-                st.rerun()
+        display_guest_details(guest, editable=False)
+
+        st.markdown("---")
+        if st.button("Gast löschen", key=f"delete_{guest.id}"):
+            delete_guest(hotel_id, guest.id)
+            st.success("Gast wurde gelöscht.")
+            st.rerun()
 
 
 # ---------------------------------------------------------
 # Hauptprogramm
 # ---------------------------------------------------------
 def main():
-    st.title("Hotelverwaltung – MVP")
-
     st.sidebar.title("Navigation")
     page = st.sidebar.radio(
         "Seite auswählen",

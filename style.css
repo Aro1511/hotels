@@ -1,0 +1,136 @@
+/* ---------------------------------------------------------
+   GLOBAL STYLE – Warm & Friendly Modern UI
+--------------------------------------------------------- */
+
+/* Gesamter Hintergrund */
+body, .stApp {
+    background-color: #FFE3C4 !important; /* weiches hellorange */
+    color: #2E2E2E !important; /* dunkles warmes Grau */
+    font-family: "Segoe UI", sans-serif !important;
+}
+
+/* ---------------------------------------------------------
+   HEADERS
+--------------------------------------------------------- */
+h1, h2, h3, h4, h5, h6 {
+    color: #8B4513 !important; /* warmes Braun */
+    font-weight: 700 !important;
+    letter-spacing: 0.5px;
+}
+
+/* ---------------------------------------------------------
+   CARDS (für Gäste, Zimmer, etc.)
+--------------------------------------------------------- */
+.card {
+    background: #FFFFFF;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    margin-bottom: 20px;
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
+
+/* ---------------------------------------------------------
+   TABS
+--------------------------------------------------------- */
+.stTabs [data-baseweb="tab"] {
+    background-color: #D8B894 !important; /* hellbraun */
+    color: #3A2F2F !important;
+    border-radius: 8px;
+    padding: 10px 18px;
+    margin-right: 6px;
+    font-weight: 600;
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background-color: #C49A6C !important; /* dunkleres warmes Braun */
+    color: #000 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* ---------------------------------------------------------
+   INPUT FIELDS
+--------------------------------------------------------- */
+input, textarea, select, .stTextInput > div > div > input {
+    background-color: #F2F2F2 !important; /* hellgrau */
+    color: #000000 !important;
+    border-radius: 8px !important;
+    border: 1px solid #C9C9C9 !important;
+    padding: 8px !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: #8B4513 !important;
+    box-shadow: 0 0 4px rgba(139, 69, 19, 0.4) !important;
+}
+
+/* ---------------------------------------------------------
+   BUTTONS
+--------------------------------------------------------- */
+.stButton > button {
+    background-color: #8B4513 !important; /* warmes Braun */
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    padding: 10px 24px !important;
+    border: none !important;
+    transition: all 0.2s ease;
+}
+
+.stButton > button:hover {
+    background-color: #A05A2C !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* ---------------------------------------------------------
+   TABLES
+--------------------------------------------------------- */
+.dataframe, .stDataFrame, .stTable {
+    background-color: #D7ECFF !important; /* hellblau */
+    color: #000000 !important;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.dataframe th, .dataframe td {
+    background-color: #D7ECFF !important;
+    color: #000000 !important;
+    padding: 10px !important;
+    border-bottom: 1px solid #BBD7F0 !important;
+}
+
+/* ---------------------------------------------------------
+   EXPANDERS
+--------------------------------------------------------- */
+.streamlit-expanderHeader {
+    background-color: #F5D7B2 !important;
+    color: #5A3A1E !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+}
+
+/* ---------------------------------------------------------
+   SCROLLBAR (modern)
+--------------------------------------------------------- */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #FFE3C4;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #C49A6C;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #A06F3C;
+}
