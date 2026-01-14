@@ -15,7 +15,7 @@ from logic import (
     checkout_guest,
     delete_guest,
 )
-from database import load_rooms
+from database import load_rooms, delete_room, set_room_free
 from models import Guest
 
 
@@ -48,7 +48,7 @@ hotel_id = st.session_state.hotel_id
 
 
 # ---------------------------------------------------------
-# Session-State für Accordion & Räume
+# Session-State für Accordion & Räume & Formular
 # ---------------------------------------------------------
 if "open_guest_id" not in st.session_state:
     st.session_state.open_guest_id = None
@@ -58,6 +58,9 @@ if "show_rooms" not in st.session_state:
 
 if "auto_open_guest" not in st.session_state:
     st.session_state.auto_open_guest = None
+
+if "guest_form_collapsed" not in st.session_state:
+    st.session_state.guest_form_collapsed = False  # Formular standardmäßig offen
 
 
 # ---------------------------------------------------------
@@ -174,7 +177,6 @@ def render_guest_accordion(guest: Guest, editable=True):
     guest_id = guest.id
     is_open = st.session_state.open_guest_id == guest_id
 
-    # Header
     arrow = "▾" if is_open else "▸"
     header_html = f"""
     <div class="accordion-header" onclick="document.getElementById('accordion_{guest_id}').click()">
@@ -183,7 +185,6 @@ def render_guest_accordion(guest: Guest, editable=True):
     """
     st.markdown(header_html, unsafe_allow_html=True)
 
-    # Hidden Streamlit Button
     if st.button("", key=f"accordion_{guest_id}", help="toggle", label_visibility="collapsed"):
         if is_open:
             st.session_state.open_guest_id = None
@@ -191,7 +192,6 @@ def render_guest_accordion(guest: Guest, editable=True):
             st.session_state.open_guest_id = guest_id
         st.rerun()
 
-    # Content
     content_class = "accordion-content open" if is_open else "accordion-content"
     st.markdown(f'<div class="{content_class}">', unsafe_allow_html=True)
 
@@ -293,6 +293,14 @@ def display_guest_details(guest: Guest, editable: bool = True):
 def page_neuer_gast():
     st.header("Neuen Gast anlegen")
 
+    # Formular nur einklappen, wenn gespeichert wurde
+    if st.session_state.guest_form_collapsed:
+        st.success("Gast wurde erfolgreich gespeichert.")
+        if st.button("Neuen Gast anlegen"):
+            st.session_state.guest_form_collapsed = False
+            st.rerun()
+        return
+
     name = st.text_input("Name des Gastes")
 
     col1, col2 = st.columns(2)
@@ -319,7 +327,7 @@ def page_neuer_gast():
                 price_per_night=float(price_per_night),
             )
             st.session_state.auto_open_guest = new_guest.id
-            st.success("Gast wurde erfolgreich gespeichert.")
+            st.session_state.guest_form_collapsed = True
             st.rerun()
 
 
@@ -335,7 +343,6 @@ def page_gaesteliste():
         st.info("Keine Gäste vorhanden.")
         return
 
-    # Auto-Open nach Speichern
     if st.session_state.auto_open_guest:
         st.session_state.open_guest_id = st.session_state.auto_open_guest
         st.session_state.auto_open_guest = None
@@ -400,13 +407,27 @@ def page_zimmerverwaltung():
         st.info("Noch keine Zimmer vorhanden.")
     else:
         for r in rooms:
-            st.markdown(f"""
-            <div class="card">
-                <p><b>Zimmer:</b> {r.number}</p>
-                <p><b>Kategorie:</b> {r.category}</p>
-                <p><b>Status:</b> {"Belegt" if r.occupied else "Frei"}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.write(f"**Zimmer:** {r.number}")
+            st.write(f"**Kategorie:** {r.category}")
+            st.write(f"**Status:** {'Belegt' if r.occupied else 'Frei'}")
+
+            colA, colB = st.columns(2)
+
+            with colA:
+                if st.button("Raum löschen", key=f"delete_room_{r.number}"):
+                    delete_room(hotel_id, r.number)
+                    st.success("Raum gelöscht.")
+                    st.rerun()
+
+            with colB:
+                if r.occupied:
+                    if st.button("Raum freigeben", key=f"free_room_{r.number}"):
+                        set_room_free(hotel_id, r.number)
+                        st.success("Raum wurde freigegeben.")
+                        st.rerun()
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------

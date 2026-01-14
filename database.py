@@ -34,3 +34,24 @@ def load_rooms(hotel_id: str) -> List[Room]:
 def save_rooms(hotel_id: str, rooms: List[Room]) -> None:
     data = [room_to_dict(r) for r in rooms]
     save_json(f"{hotel_id}/raeume", data)
+
+
+# ---------------------------------------------------------
+# NEU: Raum löschen
+# ---------------------------------------------------------
+def delete_room(hotel_id: str, room_number: int) -> None:
+    rooms = load_rooms(hotel_id)
+    rooms = [r for r in rooms if r.number != room_number]
+    save_rooms(hotel_id, rooms)
+
+
+# ---------------------------------------------------------
+# NEU: Raum freigeben
+# ---------------------------------------------------------
+def set_room_free(hotel_id: str, room_number: int) -> None:
+    rooms = load_rooms(hotel_id)
+    for r in rooms:
+        if r.number == room_number:
+            r.occupied = False
+            break
+    save_rooms(hotel_id, rooms)
