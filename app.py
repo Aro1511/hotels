@@ -48,6 +48,19 @@ hotel_id = st.session_state.hotel_id
 
 
 # ---------------------------------------------------------
+# Session-State für Accordion & Räume
+# ---------------------------------------------------------
+if "open_guest_id" not in st.session_state:
+    st.session_state.open_guest_id = None
+
+if "show_rooms" not in st.session_state:
+    st.session_state.show_rooms = False
+
+if "auto_open_guest" not in st.session_state:
+    st.session_state.auto_open_guest = None
+
+
+# ---------------------------------------------------------
 # Logo laden
 # ---------------------------------------------------------
 def image_to_base64(img):
@@ -57,42 +70,75 @@ def image_to_base64(img):
 
 
 # ---------------------------------------------------------
-# Moderner Header
+# Moderner Header + Räume-Button
 # ---------------------------------------------------------
 def show_modern_header():
     try:
         logo = Image.open("logo.png")
         encoded = image_to_base64(logo)
 
-        st.markdown(
-            f"""
-            <div style="
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 15px 20px;
-                background-color: #F5D7B2;
-                border-radius: 12px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                margin-bottom: 25px;
-            ">
-                <h1 style="margin: 0; color: #8B4513; font-weight: 700;">
-                    Hotelverwaltung
-                </h1>
-                <img src="data:image/png;base64,{encoded}" style="width: 140px;">
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        col1, col2 = st.columns([4, 1])
+
+        with col1:
+            st.markdown(
+                f"""
+                <div style="
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 15px 20px;
+                    background-color: #F5D7B2;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    margin-bottom: 25px;
+                ">
+                    <h1 style="margin: 0; color: #8B4513; font-weight: 700;">
+                        Hotelverwaltung
+                    </h1>
+                    <img src="data:image/png;base64,{encoded}" style="width: 140px;">
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with col2:
+            if st.button("Besitzte Räume"):
+                st.session_state.show_rooms = not st.session_state.show_rooms
+
     except Exception:
         st.warning("Logo konnte nicht geladen werden.")
+
 
 show_modern_header()
 
 
 # ---------------------------------------------------------
-# Hilfsfunktion: Beleg exportieren
+# Räume anzeigen
+# ---------------------------------------------------------
+def render_rooms_overview():
+    if not st.session_state.show_rooms:
+        return
+
+    rooms = load_rooms(hotel_id)
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+
+    if not rooms:
+        st.write("Keine Räume vorhanden.")
+    else:
+        st.write(f"Du besitzt **{len(rooms)} Räume**:")
+        for r in rooms:
+            st.write(f"• **Zimmer {r.number}** – {r.category}")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+render_rooms_overview()
+
+
+# ---------------------------------------------------------
+# Beleg exportieren
 # ---------------------------------------------------------
 def export_receipt_csv(guest: Guest):
     paid_count, unpaid_count, sum_paid, sum_unpaid = calculate_nights_summary(guest)
@@ -122,55 +168,37 @@ def export_receipt_csv(guest: Guest):
 
 
 # ---------------------------------------------------------
-# Seite: Neuer Gast
+# Accordion: Gastdetails
 # ---------------------------------------------------------
-def page_neuer_gast():
-    st.header("Neuen Gast anlegen")
+def render_guest_accordion(guest: Guest, editable=True):
+    guest_id = guest.id
+    is_open = st.session_state.open_guest_id == guest_id
 
-    if "form_hidden" not in st.session_state:
-        st.session_state.form_hidden = False
+    # Header
+    arrow = "▾" if is_open else "▸"
+    header_html = f"""
+    <div class="accordion-header" onclick="document.getElementById('accordion_{guest_id}').click()">
+        {arrow} {guest.name}
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
 
-    if st.session_state.form_hidden:
-        st.success("Gast wurde erfolgreich gespeichert.")
-        if st.button("Neuen Gast anlegen"):
-            st.session_state.form_hidden = False
-            st.rerun()
-        return
-
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    name = st.text_input("Name des Gastes")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        room_number = st.number_input("Zimmernummer", min_value=1, step=1)
-    with col2:
-        room_category = st.selectbox(
-            "Zimmerkategorie", ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"]
-        )
-
-    price_per_night = st.number_input(
-        "Preis pro Nacht (€)", min_value=0.0, step=1.0, format="%.2f"
-    )
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if st.button("Gast speichern", key="save_guest"):
-        if not name:
-            st.error("Name darf nicht leer sein.")
+    # Hidden Streamlit Button
+    if st.button("", key=f"accordion_{guest_id}", help="toggle", label_visibility="collapsed"):
+        if is_open:
+            st.session_state.open_guest_id = None
         else:
-            try:
-                add_guest(
-                    hotel_id,
-                    name=name,
-                    room_number=int(room_number),
-                    room_category=room_category,
-                    price_per_night=float(price_per_night),
-                )
-                st.session_state.form_hidden = True
-                st.rerun()
-            except Exception as e:
-                st.error(str(e))
+            st.session_state.open_guest_id = guest_id
+        st.rerun()
+
+    # Content
+    content_class = "accordion-content open" if is_open else "accordion-content"
+    st.markdown(f'<div class="{content_class}">', unsafe_allow_html=True)
+
+    if is_open:
+        display_guest_details(guest, editable)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
@@ -260,6 +288,42 @@ def display_guest_details(guest: Guest, editable: bool = True):
 
 
 # ---------------------------------------------------------
+# Seite: Neuer Gast
+# ---------------------------------------------------------
+def page_neuer_gast():
+    st.header("Neuen Gast anlegen")
+
+    name = st.text_input("Name des Gastes")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        room_number = st.number_input("Zimmernummer", min_value=1, step=1)
+    with col2:
+        room_category = st.selectbox(
+            "Zimmerkategorie", ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"]
+        )
+
+    price_per_night = st.number_input(
+        "Preis pro Nacht (€)", min_value=0.0, step=1.0, format="%.2f"
+    )
+
+    if st.button("Gast speichern"):
+        if not name:
+            st.error("Name darf nicht leer sein.")
+        else:
+            new_guest = add_guest(
+                hotel_id,
+                name=name,
+                room_number=int(room_number),
+                room_category=room_category,
+                price_per_night=float(price_per_night),
+            )
+            st.session_state.auto_open_guest = new_guest.id
+            st.success("Gast wurde erfolgreich gespeichert.")
+            st.rerun()
+
+
+# ---------------------------------------------------------
 # Seite: Gästeliste
 # ---------------------------------------------------------
 def page_gaesteliste():
@@ -271,17 +335,13 @@ def page_gaesteliste():
         st.info("Keine Gäste vorhanden.")
         return
 
-    for guest in guests:
-        st.markdown(f"""
-        <div class="card">
-            <h3 style="margin-bottom: 5px;">{guest.name}</h3>
-            <p><b>ID:</b> {guest.id}</p>
-            <p><b>Zimmer:</b> {guest.room_number} ({guest.room_category})</p>
-            <p><b>Status:</b> {guest.status}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # Auto-Open nach Speichern
+    if st.session_state.auto_open_guest:
+        st.session_state.open_guest_id = st.session_state.auto_open_guest
+        st.session_state.auto_open_guest = None
 
-        display_guest_details(guest, editable=True)
+    for guest in guests:
+        render_guest_accordion(guest, editable=True)
 
 
 # ---------------------------------------------------------
@@ -290,12 +350,10 @@ def page_gaesteliste():
 def page_suche():
     st.header("Gäste suchen")
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    query = st.text_input("Name (oder Teil des Namens)", key="search_input")
+    query = st.text_input("Name (oder Teil des Namens)")
     include_checked_out = st.checkbox(
-        "Auch ausgecheckte Gäste anzeigen", value=False, key="search_checkbox"
+        "Auch ausgecheckte Gäste anzeigen", value=False
     )
-    st.markdown('</div>', unsafe_allow_html=True)
 
     if query:
         results = search_guests_by_name(hotel_id, query)
@@ -308,15 +366,7 @@ def page_suche():
             return
 
         for guest in results:
-            st.markdown(f"""
-            <div class="card">
-                <h3>{guest.name}</h3>
-                <p><b>ID:</b> {guest.id}</p>
-                <p><b>Zimmer:</b> {guest.room_number}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            display_guest_details(guest, editable=True)
+            render_guest_accordion(guest, editable=True)
 
 
 # ---------------------------------------------------------
@@ -325,30 +375,23 @@ def page_suche():
 def page_zimmerverwaltung():
     st.header("Zimmerverwaltung")
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
     st.subheader("Neues Zimmer hinzufügen")
     col1, col2 = st.columns(2)
     with col1:
-        number = st.number_input(
-            "Zimmernummer", min_value=1, step=1, key="room_number"
-        )
+        number = st.number_input("Zimmernummer", min_value=1, step=1)
     with col2:
         category = st.selectbox(
             "Kategorie",
             ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"],
-            key="room_category",
         )
 
-    if st.button("Zimmer speichern", key="save_room"):
+    if st.button("Zimmer speichern"):
         try:
             add_room(hotel_id, int(number), category)
             st.success(f"Zimmer {int(number)} hinzugefügt.")
             st.rerun()
         except Exception as e:
             st.error(str(e))
-
-    st.markdown('</div>', unsafe_allow_html=True)
 
     st.subheader("Vorhandene Zimmer")
     rooms = load_rooms(hotel_id)
@@ -380,17 +423,8 @@ def page_checkout():
         return
 
     for guest in checked_out:
-        st.markdown(f"""
-        <div class="card">
-            <h3>{guest.name}</h3>
-            <p><b>ID:</b> {guest.id}</p>
-            <p><b>Zimmer:</b> {guest.room_number}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        render_guest_accordion(guest, editable=False)
 
-        display_guest_details(guest, editable=False)
-
-        st.markdown("---")
         if st.button("Gast löschen", key=f"delete_{guest.id}"):
             delete_guest(hotel_id, guest.id)
             st.success("Gast wurde gelöscht.")
@@ -405,7 +439,6 @@ def main():
     page = st.sidebar.radio(
         "Seite auswählen",
         ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout"),
-        key="nav_radio",
     )
 
     if page == "Neuer Gast":

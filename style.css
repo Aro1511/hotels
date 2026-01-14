@@ -1,9 +1,6 @@
 /* ---------------------------------------------------------
    GLOBAL STYLE – Warm & Friendly Modern UI
 --------------------------------------------------------- */
-/* ================================
-   Streamlit UI verstecken / clean UI
-   ================================ */
 
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
@@ -19,15 +16,9 @@ header {visibility: hidden;}
     padding-right: 0;
 }
 
-/* Optional: Hintergrund komplett entfernen */
-.css-18e3th9, .css-1d391kg {
-    padding-top: 0;
-}
-
-/* Gesamter Hintergrund */
 body, .stApp {
-    background-color: #FFE3C4 !important; /* weiches hellorange */
-    color: #2E2E2E !important; /* dunkles warmes Grau */
+    background-color: #FFE3C4 !important;
+    color: #2E2E2E !important;
     font-family: "Segoe UI", sans-serif !important;
 }
 
@@ -35,13 +26,13 @@ body, .stApp {
    HEADERS
 --------------------------------------------------------- */
 h1, h2, h3, h4, h5, h6 {
-    color: #8B4513 !important; /* warmes Braun */
+    color: #8B4513 !important;
     font-weight: 700 !important;
     letter-spacing: 0.5px;
 }
 
 /* ---------------------------------------------------------
-   CARDS (für Gäste, Zimmer, etc.)
+   CARDS
 --------------------------------------------------------- */
 .card {
     background: #FFFFFF;
@@ -58,28 +49,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ---------------------------------------------------------
-   TABS
---------------------------------------------------------- */
-.stTabs [data-baseweb="tab"] {
-    background-color: #D8B894 !important; /* hellbraun */
-    color: #3A2F2F !important;
-    border-radius: 8px;
-    padding: 10px 18px;
-    margin-right: 6px;
-    font-weight: 600;
-}
-
-.stTabs [data-baseweb="tab"][aria-selected="true"] {
-    background-color: #C49A6C !important; /* dunkleres warmes Braun */
-    color: #000 !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-/* ---------------------------------------------------------
-   INPUT FIELDS
+   INPUTS
 --------------------------------------------------------- */
 input, textarea, select, .stTextInput > div > div > input {
-    background-color: #F2F2F2 !important; /* hellgrau */
+    background-color: #F2F2F2 !important;
     color: #000000 !important;
     border-radius: 8px !important;
     border: 1px solid #C9C9C9 !important;
@@ -95,7 +68,7 @@ input:focus, textarea:focus, select:focus {
    BUTTONS
 --------------------------------------------------------- */
 .stButton > button {
-    background-color: #8B4513 !important; /* warmes Braun */
+    background-color: #8B4513 !important;
     color: #FFFFFF !important;
     font-weight: 600 !important;
     border-radius: 10px !important;
@@ -111,34 +84,38 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ---------------------------------------------------------
-   TABLES
+   ACCORDION (Eigenes System)
 --------------------------------------------------------- */
-.dataframe, .stDataFrame, .stTable {
-    background-color: #D7ECFF !important; /* hellblau */
-    color: #000000 !important;
+
+.accordion-header {
+    background: #F5D7B2;
+    padding: 14px 18px;
     border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #5A3A1E;
+    margin-bottom: 8px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+}
+
+.accordion-header:hover {
+    background: #EEC89A;
+    transform: translateY(-2px);
+}
+
+.accordion-content {
+    max-height: 0;
     overflow: hidden;
+    transition: max-height 0.35s ease;
 }
 
-.dataframe th, .dataframe td {
-    background-color: #D7ECFF !important;
-    color: #000000 !important;
-    padding: 10px !important;
-    border-bottom: 1px solid #BBD7F0 !important;
-}
-
-/* ---------------------------------------------------------
-   EXPANDERS
---------------------------------------------------------- */
-.streamlit-expanderHeader {
-    background-color: #F5D7B2 !important;
-    color: #5A3A1E !important;
-    font-weight: 600 !important;
-    border-radius: 8px !important;
+.accordion-content.open {
+    max-height: 2000px;
 }
 
 /* ---------------------------------------------------------
-   SCROLLBAR (modern)
+   SCROLLBAR
 --------------------------------------------------------- */
 ::-webkit-scrollbar {
     width: 10px;
