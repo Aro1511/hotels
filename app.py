@@ -29,6 +29,7 @@ def load_css():
     except Exception:
         st.warning("Konnte style.css nicht laden.")
 
+
 load_css()
 
 
@@ -134,7 +135,7 @@ def render_rooms_overview():
         for r in rooms:
             st.write(f"• **Zimmer {r.number}** – {r.category}")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 render_rooms_overview()
@@ -168,46 +169,29 @@ def export_receipt_csv(guest: Guest):
         writer.writerow([n.number, "Ja" if n.paid else "Nein"])
 
     return output.getvalue()
+
+
 # ---------------------------------------------------------
-# Accordion: Gastdetails
+# Accordion: Gastdetails (ohne HTML-Tricks)
 # ---------------------------------------------------------
-def render_guest_accordion(guest: Guest, editable=True):
+def render_guest_accordion(guest: Guest, editable: bool = True):
     guest_id = guest.id
     is_open = st.session_state.open_guest_id == guest_id
 
     arrow = "▾" if is_open else "▸"
+    label = f"{arrow} {guest.name}"
 
-    # Header (sichtbar)
-    header_html = f"""
-    <div class="accordion-header" onclick="document.getElementById('btn_{guest_id}').click()">
-        {arrow} {guest.name}
-    </div>
-    """
-    st.markdown(header_html, unsafe_allow_html=True)
-
-    # Unsichtbarer Button (funktioniert ohne Fehler)
-    clicked = st.button(
-        "toggle",
-        key=f"btn_{guest_id}",
-        help="toggle",
-        label_visibility="hidden"
-    )
-
-    if clicked:
+    # Button als Header
+    if st.button(label, key=f"guest_header_{guest_id}"):
         if is_open:
             st.session_state.open_guest_id = None
         else:
             st.session_state.open_guest_id = guest_id
         st.rerun()
 
-    # Accordion-Content
-    content_class = "accordion-content open" if is_open else "accordion-content"
-    st.markdown(f'<div class="{content_class}">', unsafe_allow_html=True)
-
+    # Inhalt nur anzeigen, wenn offen
     if is_open:
         display_guest_details(guest, editable)
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
@@ -293,7 +277,7 @@ def display_guest_details(guest: Guest, editable: bool = True):
                 st.success("Gast wurde ausgecheckt.")
                 st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
@@ -437,7 +421,7 @@ def page_zimmerverwaltung():
                         st.success("Raum wurde freigegeben.")
                         st.rerun()
 
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
