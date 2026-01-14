@@ -48,7 +48,7 @@ hotel_id = st.session_state.hotel_id
 
 
 # ---------------------------------------------------------
-# Session-State für Accordion & Räume & Formular
+# Session-State
 # ---------------------------------------------------------
 if "open_guest_id" not in st.session_state:
     st.session_state.open_guest_id = None
@@ -168,8 +168,6 @@ def export_receipt_csv(guest: Guest):
         writer.writerow([n.number, "Ja" if n.paid else "Nein"])
 
     return output.getvalue()
-
-
 # ---------------------------------------------------------
 # Accordion: Gastdetails
 # ---------------------------------------------------------
@@ -178,20 +176,31 @@ def render_guest_accordion(guest: Guest, editable=True):
     is_open = st.session_state.open_guest_id == guest_id
 
     arrow = "▾" if is_open else "▸"
+
+    # Header (sichtbar)
     header_html = f"""
-    <div class="accordion-header" onclick="document.getElementById('accordion_{guest_id}').click()">
+    <div class="accordion-header" onclick="document.getElementById('btn_{guest_id}').click()">
         {arrow} {guest.name}
     </div>
     """
     st.markdown(header_html, unsafe_allow_html=True)
 
-    if st.button("", key=f"accordion_{guest_id}", help="toggle", label_visibility="collapsed"):
+    # Unsichtbarer Button (funktioniert ohne Fehler)
+    clicked = st.button(
+        "toggle",
+        key=f"btn_{guest_id}",
+        help="toggle",
+        label_visibility="hidden"
+    )
+
+    if clicked:
         if is_open:
             st.session_state.open_guest_id = None
         else:
             st.session_state.open_guest_id = guest_id
         st.rerun()
 
+    # Accordion-Content
     content_class = "accordion-content open" if is_open else "accordion-content"
     st.markdown(f'<div class="{content_class}">', unsafe_allow_html=True)
 
@@ -343,6 +352,7 @@ def page_gaesteliste():
         st.info("Keine Gäste vorhanden.")
         return
 
+    # Auto-Open nach Speichern
     if st.session_state.auto_open_guest:
         st.session_state.open_guest_id = st.session_state.auto_open_guest
         st.session_state.auto_open_guest = None
