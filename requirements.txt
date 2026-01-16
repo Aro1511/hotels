@@ -3,3 +3,4 @@ requests
 Pillow
 firebase-admin
 google-cloud-firestore
+reportlab
