@@ -4,13 +4,12 @@ from datetime import datetime
 from models import Guest
 import os
 
-
-FONT_URL = "https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/DejaVuSans.ttf"
+FONT_URL = "https://raw.githubusercontent.com/python-pillow/Pillow/master/Tests/fonts/DejaVuSans.ttf"
 FONT_FILE = "DejaVuSans.ttf"
 
 
 def ensure_font_exists():
-    if not os.path.exists(FONT_FILE):
+    if not os.path.exists(FONT_FILE) or os.path.getsize(FONT_FILE) < 10000:
         r = requests.get(FONT_URL)
         with open(FONT_FILE, "wb") as f:
             f.write(r.content)
