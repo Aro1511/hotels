@@ -17,6 +17,7 @@ from logic import (
 )
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
+from utils import load_language, translator
 
 
 # ---------------------------------------------------------
@@ -27,16 +28,23 @@ def load_css():
         with open("style.css") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception:
-        st.warning("Konnte style.css nicht laden.")
+        pass
 
 
 load_css()
 
 
 # ---------------------------------------------------------
-# Grundkonfiguration
+# Sprache & Grundkonfiguration
 # ---------------------------------------------------------
-st.set_page_config(page_title="Hotelverwaltung", layout="wide")
+if "language" not in st.session_state:
+    st.session_state.language = "de"
+
+lang_choice = st.session_state.get("language", "de")
+texts = load_language(lang_choice)
+t = translator(texts)
+
+st.set_page_config(page_title=t("app_title"), layout="wide")
 
 
 # ---------------------------------------------------------
@@ -61,7 +69,7 @@ if "auto_open_guest" not in st.session_state:
     st.session_state.auto_open_guest = None
 
 if "guest_form_collapsed" not in st.session_state:
-    st.session_state.guest_form_collapsed = False  # Formular standardmäßig offen
+    st.session_state.guest_form_collapsed = False
 
 
 # ---------------------------------------------------------
@@ -98,7 +106,7 @@ def show_modern_header():
                     margin-bottom: 25px;
                 ">
                     <h1 style="margin: 0; color: #8B4513; font-weight: 700;">
-                        Hotelverwaltung
+                        {t("header_title")}
                     </h1>
                     <img src="data:image/png;base64,{encoded}" style="width: 140px;">
                 </div>
@@ -107,11 +115,11 @@ def show_modern_header():
             )
 
         with col2:
-            if st.button("Besitzte Räume"):
+            if st.button(t("owned_rooms_button")):
                 st.session_state.show_rooms = not st.session_state.show_rooms
 
     except Exception:
-        st.warning("Logo konnte nicht geladen werden.")
+        pass
 
 
 show_modern_header()
@@ -129,11 +137,15 @@ def render_rooms_overview():
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     if not rooms:
-        st.write("Keine Räume vorhanden.")
+        st.write(t("no_rooms"))
     else:
-        st.write(f"Du besitzt **{len(rooms)} Räume**:")
+        st.write(t("you_have_rooms").replace("{count}", str(len(rooms))))
         for r in rooms:
-            st.write(f"• **Zimmer {r.number}** – {r.category}")
+            st.write(
+                "• " + t("room_item")
+                .replace("{number}", str(r.number))
+                .replace("{category}", r.category)
+            )
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -150,29 +162,29 @@ def export_receipt_csv(guest: Guest):
     output = io.StringIO()
     writer = csv.writer(output, delimiter=";")
 
-    writer.writerow(["Beleg für Gast"])
-    writer.writerow(["Name", guest.name])
-    writer.writerow(["Zimmer", guest.room_number])
-    writer.writerow(["Kategorie", guest.room_category])
-    writer.writerow(["Preis pro Nacht", guest.price_per_night])
-    writer.writerow(["Check-in", guest.checkin_date])
-    writer.writerow(["Check-out", guest.checkout_date or "-"])
+    writer.writerow([t("receipt_for_guest")])
+    writer.writerow([t("guest_name"), guest.name])
+    writer.writerow([t("room"), guest.room_number])
+    writer.writerow([t("category"), guest.room_category])
+    writer.writerow([t("price_per_night"), guest.price_per_night])
+    writer.writerow([t("checkin"), guest.checkin_date])
+    writer.writerow([t("checkout"), guest.checkout_date or "-"])
     writer.writerow([])
-    writer.writerow(["Bezahlte Nächte", paid_count])
-    writer.writerow(["Unbezahlte Nächte", unpaid_count])
-    writer.writerow(["Summe bezahlt (€)", sum_paid])
-    writer.writerow(["Summe offen (€)", sum_unpaid])
+    writer.writerow([t("paid_nights"), paid_count])
+    writer.writerow([t("unpaid_nights"), unpaid_count])
+    writer.writerow([t("sum_paid"), sum_paid])
+    writer.writerow([t("sum_unpaid"), sum_unpaid])
     writer.writerow([])
-    writer.writerow(["Nacht", "Bezahlt"])
+    writer.writerow([t("night"), t("paid")])
 
     for n in guest.nights:
-        writer.writerow([n.number, "Ja" if n.paid else "Nein"])
+        writer.writerow([n.number, t("yes") if n.paid else t("no")])
 
     return output.getvalue()
 
 
 # ---------------------------------------------------------
-# Accordion: Gastdetails (ohne HTML-Tricks)
+# Accordion: Gastdetails
 # ---------------------------------------------------------
 def render_guest_accordion(guest: Guest, editable: bool = True):
     guest_id = guest.id
@@ -181,7 +193,6 @@ def render_guest_accordion(guest: Guest, editable: bool = True):
     arrow = "▾" if is_open else "▸"
     label = f"{arrow} {guest.name}"
 
-    # Button als Header
     if st.button(label, key=f"guest_header_{guest_id}"):
         if is_open:
             st.session_state.open_guest_id = None
@@ -189,7 +200,6 @@ def render_guest_accordion(guest: Guest, editable: bool = True):
             st.session_state.open_guest_id = guest_id
         st.rerun()
 
-    # Inhalt nur anzeigen, wenn offen
     if is_open:
         display_guest_details(guest, editable)
 
@@ -200,52 +210,56 @@ def render_guest_accordion(guest: Guest, editable: bool = True):
 def display_guest_details(guest: Guest, editable: bool = True):
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    st.write(f"**Zimmer:** {guest.room_number} ({guest.room_category})")
-    st.write(f"**Preis pro Nacht:** {guest.price_per_night:.2f} €")
-    st.write(f"**Check-in:** {guest.checkin_date}")
+    st.write(f"**{t('guest_details_room')}:** {guest.room_number} ({guest.room_category})")
+    st.write(f"**{t('guest_details_price')}:** {guest.price_per_night:.2f} €")
+    st.write(f"**{t('checkin')}:** {guest.checkin_date}")
     if guest.checkout_date:
-        st.write(f"**Check-out:** {guest.checkout_date}")
-    st.write(f"**Status:** {guest.status}")
+        st.write(f"**{t('checkout')}:** {guest.checkout_date}")
+    st.write(f"**{t('guest_details_status')}:** {guest.status}")
 
-    st.markdown("### Nächte")
+    st.markdown(f"### {t('guest_details_nights')}")
     if not guest.nights:
-        st.info("Noch keine Nächte eingetragen.")
+        st.info(t("no_nights"))
     else:
         cols = st.columns([1, 2, 2])
-        cols[0].markdown("**Nacht**")
-        cols[1].markdown("**Bezahlt**")
-        cols[2].markdown("**Aktion**")
+        cols[0].markdown(f"**{t('night')}**")
+        cols[1].markdown(f"**{t('paid')}**")
+        cols[2].markdown(f"**{t('action')}**")
 
         for n in guest.nights:
             cols = st.columns([1, 2, 2])
             cols[0].write(n.number)
-            cols[1].write("Ja" if n.paid else "Nein")
+            cols[1].write(t("yes") if n.paid else t("no"))
 
             if editable:
                 if n.paid:
                     if cols[2].button(
-                        "Auf unbezahlte setzen",
+                        t("set_unpaid"),
                         key=f"unpaid_{guest.id}_{n.number}",
                     ):
                         set_night_paid_status(hotel_id, guest.id, n.number, False)
                         st.rerun()
                 else:
                     if cols[2].button(
-                        "Als bezahlt markieren",
+                        t("set_paid"),
                         key=f"paid_{guest.id}_{n.number}",
                     ):
                         set_night_paid_status(hotel_id, guest.id, n.number, True)
                         st.rerun()
 
     paid_count, unpaid_count, sum_paid, sum_unpaid = calculate_nights_summary(guest)
-    st.markdown("### Zusammenfassung")
-    st.write(f"**Bezahlte Nächte:** {paid_count} (Summe: {sum_paid:.2f} €)")
-    st.write(f"**Unbezahlte Nächte:** {unpaid_count} (Summe: {sum_unpaid:.2f} €)")
+    st.markdown(f"### {t('summary')}")
+    st.write(
+        f"**{t('paid_nights')}:** {paid_count} (Summe: {sum_paid:.2f} €)"
+    )
+    st.write(
+        f"**{t('unpaid_nights')}:** {unpaid_count} (Summe: {sum_unpaid:.2f} €)"
+    )
 
-    st.markdown("### Beleg exportieren")
+    st.markdown(f"### {t('export_receipt')}")
     csv_data = export_receipt_csv(guest)
     st.download_button(
-        label="Beleg als CSV herunterladen",
+        label=t("download_receipt_csv"),
         data=csv_data,
         file_name=f"beleg_{guest.name.replace(' ', '_')}.csv",
         mime="text/csv",
@@ -253,13 +267,15 @@ def display_guest_details(guest: Guest, editable: bool = True):
     )
 
     if editable:
-        st.markdown("### Nächte hinzufügen")
+        st.markdown(f"### {t('add_nights')}")
         col_add1, col_add2 = st.columns(2)
         with col_add1:
-            add_paid = st.button("Bezahlte Nacht hinzufügen", key=f"add_paid_{guest.id}")
+            add_paid = st.button(
+                t("add_paid_night"), key=f"add_paid_{guest.id}"
+            )
         with col_add2:
             add_unpaid = st.button(
-                "Unbezahlte Nacht hinzufügen", key=f"add_unpaid_{guest.id}"
+                t("add_unpaid_night"), key=f"add_unpaid_{guest.id}"
             )
 
         if add_paid:
@@ -270,11 +286,11 @@ def display_guest_details(guest: Guest, editable: bool = True):
             add_night_to_guest(hotel_id, guest.id, paid=False)
             st.rerun()
 
-        st.markdown("### Gast-Aktionen")
+        st.markdown(f"### {t('guest_actions')}")
         if guest.status == "checked_in":
-            if st.button("Checkout durchführen", key=f"checkout_{guest.id}"):
+            if st.button(t("checkout_guest"), key=f"checkout_{guest.id}"):
                 checkout_guest(hotel_id, guest.id)
-                st.success("Gast wurde ausgecheckt.")
+                st.success(t("guest_checked_out"))
                 st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -284,33 +300,33 @@ def display_guest_details(guest: Guest, editable: bool = True):
 # Seite: Neuer Gast
 # ---------------------------------------------------------
 def page_neuer_gast():
-    st.header("Neuen Gast anlegen")
+    st.header(t("new_guest_page"))
 
-    # Formular nur einklappen, wenn gespeichert wurde
     if st.session_state.guest_form_collapsed:
-        st.success("Gast wurde erfolgreich gespeichert.")
-        if st.button("Neuen Gast anlegen"):
+        st.success(t("guest_saved"))
+        if st.button(t("create_new_guest")):
             st.session_state.guest_form_collapsed = False
             st.rerun()
         return
 
-    name = st.text_input("Name des Gastes")
+    name = st.text_input(t("guest_name_label"))
 
     col1, col2 = st.columns(2)
     with col1:
-        room_number = st.number_input("Zimmernummer", min_value=1, step=1)
+        room_number = st.number_input(t("room_number_label"), min_value=1, step=1)
     with col2:
         room_category = st.selectbox(
-            "Zimmerkategorie", ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"]
+            t("room_category_label"),
+            ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"],
         )
 
     price_per_night = st.number_input(
-        "Preis pro Nacht (€)", min_value=0.0, step=1.0, format="%.2f"
+        t("price_per_night_label"), min_value=0.0, step=1.0, format="%.2f"
     )
 
-    if st.button("Gast speichern"):
+    if st.button(t("save_guest")):
         if not name:
-            st.error("Name darf nicht leer sein.")
+            st.error(t("name_required"))
         else:
             new_guest = add_guest(
                 hotel_id,
@@ -328,15 +344,14 @@ def page_neuer_gast():
 # Seite: Gästeliste
 # ---------------------------------------------------------
 def page_gaesteliste():
-    st.header("Liste der Gäste")
+    st.header(t("guest_list_page"))
 
     guests = list_all_guests(hotel_id, include_checked_out=False)
 
     if not guests:
-        st.info("Keine Gäste vorhanden.")
+        st.info(t("no_guests"))
         return
 
-    # Auto-Open nach Speichern
     if st.session_state.auto_open_guest:
         st.session_state.open_guest_id = st.session_state.auto_open_guest
         st.session_state.auto_open_guest = None
@@ -349,11 +364,11 @@ def page_gaesteliste():
 # Seite: Suche
 # ---------------------------------------------------------
 def page_suche():
-    st.header("Gäste suchen")
+    st.header(t("search_page"))
 
-    query = st.text_input("Name (oder Teil des Namens)")
+    query = st.text_input(t("search_name"))
     include_checked_out = st.checkbox(
-        "Auch ausgecheckte Gäste anzeigen", value=False
+        t("include_checked_out"), value=False
     )
 
     if query:
@@ -363,7 +378,7 @@ def page_suche():
             results = [g for g in results if g.status == "checked_in"]
 
         if not results:
-            st.warning("Keine passenden Gäste gefunden.")
+            st.warning(t("no_results"))
             return
 
         for guest in results:
@@ -374,51 +389,56 @@ def page_suche():
 # Seite: Zimmerverwaltung
 # ---------------------------------------------------------
 def page_zimmerverwaltung():
-    st.header("Zimmerverwaltung")
+    st.header(t("room_management_page"))
 
-    st.subheader("Neues Zimmer hinzufügen")
+    st.subheader(t("add_room_section"))
     col1, col2 = st.columns(2)
     with col1:
-        number = st.number_input("Zimmernummer", min_value=1, step=1)
+        number = st.number_input(t("room_number"), min_value=1, step=1)
     with col2:
         category = st.selectbox(
-            "Kategorie",
+            t("room_category"),
             ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"],
         )
 
-    if st.button("Zimmer speichern"):
+    if st.button(t("save_room")):
         try:
             add_room(hotel_id, int(number), category)
-            st.success(f"Zimmer {int(number)} hinzugefügt.")
+            st.success(
+                t("room_added").replace("{number}", str(int(number)))
+            )
             st.rerun()
         except Exception as e:
             st.error(str(e))
 
-    st.subheader("Vorhandene Zimmer")
+    st.subheader(t("existing_rooms"))
     rooms = load_rooms(hotel_id)
 
     if not rooms:
-        st.info("Noch keine Zimmer vorhanden.")
+        st.info(t("no_rooms_yet"))
     else:
         for r in rooms:
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.write(f"**Zimmer:** {r.number}")
-            st.write(f"**Kategorie:** {r.category}")
-            st.write(f"**Status:** {'Belegt' if r.occupied else 'Frei'}")
+            st.write(f"**{t('room')}:** {r.number}")
+            st.write(f"**{t('room_category')}:** {r.category}")
+            st.write(
+                f"**{t('room_status')}:** "
+                f"{t('occupied') if r.occupied else t('free')}"
+            )
 
             colA, colB = st.columns(2)
 
             with colA:
-                if st.button("Raum löschen", key=f"delete_room_{r.number}"):
+                if st.button(t("delete_room"), key=f"delete_room_{r.number}"):
                     delete_room(hotel_id, r.number)
-                    st.success("Raum gelöscht.")
+                    st.success(t("room_deleted"))
                     st.rerun()
 
             with colB:
                 if r.occupied:
-                    if st.button("Raum freigeben", key=f"free_room_{r.number}"):
+                    if st.button(t("free_room"), key=f"free_room_{r.number}"):
                         set_room_free(hotel_id, r.number)
-                        st.success("Raum wurde freigegeben.")
+                        st.success(t("room_freed"))
                         st.rerun()
 
             st.markdown("</div>", unsafe_allow_html=True)
@@ -428,21 +448,21 @@ def page_zimmerverwaltung():
 # Seite: Checkout
 # ---------------------------------------------------------
 def page_checkout():
-    st.header("Ausgecheckte Gäste")
+    st.header(t("checkout_page"))
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
     checked_out = [g for g in guests if g.status == "checked_out"]
 
     if not checked_out:
-        st.info("Noch keine ausgecheckten Gäste.")
+        st.info(t("no_checked_out_guests"))
         return
 
     for guest in checked_out:
         render_guest_accordion(guest, editable=False)
 
-        if st.button("Gast löschen", key=f"delete_{guest.id}"):
+        if st.button(t("delete_guest_button"), key=f"delete_{guest.id}"):
             delete_guest(hotel_id, guest.id)
-            st.success("Gast wurde gelöscht.")
+            st.success(t("guest_deleted"))
             st.rerun()
 
 
@@ -450,21 +470,46 @@ def page_checkout():
 # Hauptprogramm
 # ---------------------------------------------------------
 def main():
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio(
-        "Seite auswählen",
-        ("Neuer Gast", "Gästeliste", "Suche", "Zimmerverwaltung", "Checkout"),
-    )
+    with st.sidebar:
+        st.title(t("navigation"))
 
-    if page == "Neuer Gast":
+        current_lang = st.session_state.get("language", "de")
+        lang_options = {
+            t("german"): "de",
+            t("english"): "en"
+        }
+        selected_label = st.radio(
+            t("language"),
+            list(lang_options.keys()),
+            index=0 if current_lang == "de" else 1
+        )
+        new_lang = lang_options[selected_label]
+        if new_lang != current_lang:
+            st.session_state["language"] = new_lang
+            st.rerun()
+
+        st.markdown("---")
+
+        page = st.radio(
+            t("select_page"),
+            (
+                t("page_new_guest"),
+                t("page_guest_list"),
+                t("page_search"),
+                t("page_room_management"),
+                t("page_checkout"),
+            ),
+        )
+
+    if page == t("page_new_guest"):
         page_neuer_gast()
-    elif page == "Gästeliste":
+    elif page == t("page_guest_list"):
         page_gaesteliste()
-    elif page == "Suche":
+    elif page == t("page_search"):
         page_suche()
-    elif page == "Zimmerverwaltung":
+    elif page == t("page_room_management"):
         page_zimmerverwaltung()
-    elif page == "Checkout":
+    elif page == t("page_checkout"):
         page_checkout()
 
 
