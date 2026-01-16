@@ -133,3 +133,53 @@ input:focus, textarea:focus, select:focus {
 ::-webkit-scrollbar-thumb:hover {
     background: #A06F3C;
 }
+/* ---------------------------------------------------------
+   MOBILE OPTIMIZATION
+--------------------------------------------------------- */
+
+@media (max-width: 768px) {
+
+    /* Reduce padding for mobile */
+    .block-container {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    /* Make cards full width */
+    .card {
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* Larger buttons for touch screens */
+    .stButton > button {
+        width: 100% !important;
+        padding: 14px 20px !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Inputs full width */
+    input, textarea, select {
+        font-size: 1.05rem !important;
+        padding: 12px !important;
+    }
+
+    /* Accordion header bigger */
+    .accordion-header {
+        padding: 16px !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Make columns stack vertically */
+    [class*="css-"] > .stColumn {
+        flex-direction: column !important;
+    }
+
+    /* Reduce header size */
+    h1 {
+        font-size: 1.8rem !important;
+    }
+    h2 {
+        font-size: 1.5rem !important;
+    }
+}

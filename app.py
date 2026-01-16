@@ -3,6 +3,7 @@ import csv
 import io
 from PIL import Image
 import base64
+import pandas as pd
 
 from logic import (
     add_room,
@@ -18,6 +19,7 @@ from logic import (
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
 from utils import load_language, translator
+from pdf_generator import generate_receipt_pdf
 
 
 # ---------------------------------------------------------
@@ -154,7 +156,7 @@ render_rooms_overview()
 
 
 # ---------------------------------------------------------
-# Beleg exportieren
+# PDF + CSV Export
 # ---------------------------------------------------------
 def export_receipt_csv(guest: Guest):
     paid_count, unpaid_count, sum_paid, sum_unpaid = calculate_nights_summary(guest)
@@ -264,6 +266,16 @@ def display_guest_details(guest: Guest, editable: bool = True):
         file_name=f"beleg_{guest.name.replace(' ', '_')}.csv",
         mime="text/csv",
         key=f"download_{guest.id}",
+    )
+
+    # PDF Export
+    pdf_data = generate_receipt_pdf(guest, t)
+    st.download_button(
+        label=t("download_receipt_pdf"),
+        data=pdf_data,
+        file_name=f"beleg_{guest.name.replace(' ', '_')}.pdf",
+        mime="application/pdf",
+        key=f"pdf_{guest.id}",
     )
 
     if editable:
@@ -467,6 +479,67 @@ def page_checkout():
 
 
 # ---------------------------------------------------------
+# Seite: Dashboard
+# ---------------------------------------------------------
+def page_dashboard():
+    st.header(t("dashboard"))
+
+    guests = list_all_guests(hotel_id, include_checked_out=True)
+    rooms = load_rooms(hotel_id)
+
+    current_guests = len([g for g in guests if g.status == "checked_in"])
+    checked_out = len([g for g in guests if g.status == "checked_out"])
+    total_rooms = len(rooms)
+    occupied_rooms = len([r for r in rooms if r.occupied])
+    free_rooms = total_rooms - occupied_rooms
+
+    revenue = 0
+    unpaid = 0
+    for g in guests:
+        paid_count = len([n for n in g.nights if n.paid])
+        unpaid_count = len([n for n in g.nights if not n.paid])
+        revenue += paid_count * g.price_per_night
+        unpaid += unpaid_count * g.price_per_night
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(t("stats_current_guests"), current_guests)
+        st.metric(t("stats_checked_out"), checked_out)
+    with col2:
+        st.metric(t("stats_rooms_total"), total_rooms)
+        st.metric(t("stats_rooms_occupied"), occupied_rooms)
+    with col3:
+        st.metric(t("stats_rooms_free"), free_rooms)
+        st.metric(t("stats_revenue"), f"{revenue:.2f} €")
+
+    st.metric(t("stats_unpaid"), f"{unpaid:.2f} €")
+
+    st.markdown("---")
+
+    if guests:
+        df_revenue = pd.DataFrame({
+            "Gast": [g.name for g in guests],
+            "Einnahmen": [
+                len([n for n in g.nights if n.paid]) * g.price_per_night
+                for g in guests
+            ]
+        })
+
+        st.subheader(t("chart_revenue_title"))
+        st.bar_chart(df_revenue, x="Gast", y="Einnahmen")
+
+    st.markdown("---")
+
+    df_rooms = pd.DataFrame({
+        "Status": [t("occupied"), t("free")],
+        "Anzahl": [occupied_rooms, free_rooms]
+    })
+
+    st.subheader(t("chart_occupancy_title"))
+    st.bar_chart(df_rooms, x="Status", y="Anzahl")
+
+
+# ---------------------------------------------------------
 # Hauptprogramm
 # ---------------------------------------------------------
 def main():
@@ -485,33 +558,4 @@ def main():
         )
         new_lang = lang_options[selected_label]
         if new_lang != current_lang:
-            st.session_state["language"] = new_lang
-            st.rerun()
-
-        st.markdown("---")
-
-        page = st.radio(
-            t("select_page"),
-            (
-                t("page_new_guest"),
-                t("page_guest_list"),
-                t("page_search"),
-                t("page_room_management"),
-                t("page_checkout"),
-            ),
-        )
-
-    if page == t("page_new_guest"):
-        page_neuer_gast()
-    elif page == t("page_guest_list"):
-        page_gaesteliste()
-    elif page == t("page_search"):
-        page_suche()
-    elif page == t("page_room_management"):
-        page_zimmerverwaltung()
-    elif page == t("page_checkout"):
-        page_checkout()
-
-
-if __name__ == "__main__":
-    main()
+            st.session_state["language"] =
