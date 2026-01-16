@@ -156,7 +156,7 @@ render_rooms_overview()
 
 
 # ---------------------------------------------------------
-# PDF + CSV Export
+# CSV Export
 # ---------------------------------------------------------
 def export_receipt_csv(guest: Guest):
     paid_count, unpaid_count, sum_paid, sum_unpaid = calculate_nights_summary(guest)
@@ -558,4 +558,36 @@ def main():
         )
         new_lang = lang_options[selected_label]
         if new_lang != current_lang:
-            st.session_state["language"] =
+            st.session_state["language"] = new_lang
+            st.rerun()
+
+        st.markdown("---")
+
+        page = st.radio(
+            t("select_page"),
+            (
+                t("dashboard"),
+                t("page_new_guest"),
+                t("page_guest_list"),
+                t("page_search"),
+                t("page_room_management"),
+                t("page_checkout"),
+            ),
+        )
+
+    if page == t("dashboard"):
+        page_dashboard()
+    elif page == t("page_new_guest"):
+        page_neuer_gast()
+    elif page == t("page_guest_list"):
+        page_gaesteliste()
+    elif page == t("page_search"):
+        page_suche()
+    elif page == t("page_room_management"):
+        page_zimmerverwaltung()
+    elif page == t("page_checkout"):
+        page_checkout()
+
+
+if __name__ == "__main__":
+    main()
