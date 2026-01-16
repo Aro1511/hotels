@@ -3,4 +3,4 @@ requests
 Pillow
 firebase-admin
 google-cloud-firestore
-fpdf2
+pymupdf

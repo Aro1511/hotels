@@ -1,57 +1,44 @@
-from fpdf import FPDF, HTMLMixin
+import fitz  # PyMuPDF
 from datetime import datetime
 from models import Guest
 
 
-class PDF(FPDF, HTMLMixin):
-    pass
-
-
 def generate_receipt_pdf(guest: Guest, t):
-    pdf = PDF()
-    pdf.add_page()
+    doc = fitz.open()
+    page = doc.new_page()
 
-    html = f"""
-    <h2>{t('receipt_for_guest')}</h2>
+    y = 40
+    line_height = 18
 
-    <p><b>{t('guest_name')}:</b> {guest.name}</p>
-    <p><b>{t('room')}:</b> {guest.room_number} ({guest.room_category})</p>
-    <p><b>{t('price_per_night')}:</b> {guest.price_per_night:.2f} €</p>
-    <p><b>{t('checkin')}:</b> {guest.checkin_date}</p>
-    <p><b>{t('checkout')}:</b> {guest.checkout_date or '-'}</p>
+    def write(text, size=12):
+        nonlocal y
+        page.insert_text((40, y), text, fontsize=size)
+        y += line_height
 
-    <h3>{t('guest_details_nights')}</h3>
-    <table border="1" width="100%" align="center">
-        <thead>
-            <tr>
-                <th>{t('night')}</th>
-                <th>{t('paid')}</th>
-            </tr>
-        </thead>
-        <tbody>
-    """
+    write(t("receipt_for_guest"), 16)
+    write("")
+    write(f"{t('guest_name')}: {guest.name}")
+    write(f"{t('room')}: {guest.room_number} ({guest.room_category})")
+    write(f"{t('price_per_night')}: {guest.price_per_night:.2f} €")
+    write(f"{t('checkin')}: {guest.checkin_date}")
+    write(f"{t('checkout')}: {guest.checkout_date or '-'}")
+
+    write("")
+    write(t("guest_details_nights"), 14)
 
     for n in guest.nights:
-        html += f"""
-        <tr>
-            <td>{n.number}</td>
-            <td>{t('yes') if n.paid else t('no')}</td>
-        </tr>
-        """
-
-    html += "</tbody></table>"
+        write(f"{t('night')} {n.number}: {t('yes') if n.paid else t('no')}")
 
     paid_count = len([n for n in guest.nights if n.paid])
     unpaid_count = len([n for n in guest.nights if not n.paid])
     sum_paid = paid_count * guest.price_per_night
     sum_unpaid = unpaid_count * guest.price_per_night
 
-    html += f"""
-    <h3>{t('summary')}</h3>
-    <p>{t('paid_nights')}: {paid_count} (Summe: {sum_paid:.2f} €)</p>
-    <p>{t('unpaid_nights')}: {unpaid_count} (Summe: {sum_unpaid:.2f} €)</p>
-    """
+    write("")
+    write(t("summary"), 14)
+    write(f"{t('paid_nights')}: {paid_count} (Summe: {sum_paid:.2f} €)")
+    write(f"{t('unpaid_nights')}: {unpaid_count} (Summe: {sum_unpaid:.2f} €)")
 
-    pdf.write_html(html)
-
-    return pdf.output(dest="S").encode("latin1")
+    pdf_bytes = doc.write()
+    doc.close()
+    return pdf_bytes
