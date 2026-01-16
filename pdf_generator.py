@@ -1,65 +1,57 @@
-import requests
-from fpdf import FPDF
+from fpdf import FPDF, HTMLMixin
 from datetime import datetime
 from models import Guest
-import os
-
-FONT_URL = "https://raw.githubusercontent.com/python-pillow/Pillow/master/Tests/fonts/DejaVuSans.ttf"
-FONT_FILE = "DejaVuSans.ttf"
 
 
-def ensure_font_exists():
-    if not os.path.exists(FONT_FILE) or os.path.getsize(FONT_FILE) < 10000:
-        r = requests.get(FONT_URL)
-        with open(FONT_FILE, "wb") as f:
-            f.write(r.content)
+class PDF(FPDF, HTMLMixin):
+    pass
 
 
 def generate_receipt_pdf(guest: Guest, t):
-    ensure_font_exists()
-
-    pdf = FPDF()
+    pdf = PDF()
     pdf.add_page()
 
-    pdf.add_font("DejaVu", "", FONT_FILE, uni=True)
-    pdf.set_font("DejaVu", "", 14)
+    html = f"""
+    <h2>{t('receipt_for_guest')}</h2>
 
-    pdf.cell(0, 10, t("receipt_for_guest"), ln=True)
+    <p><b>{t('guest_name')}:</b> {guest.name}</p>
+    <p><b>{t('room')}:</b> {guest.room_number} ({guest.room_category})</p>
+    <p><b>{t('price_per_night')}:</b> {guest.price_per_night:.2f} €</p>
+    <p><b>{t('checkin')}:</b> {guest.checkin_date}</p>
+    <p><b>{t('checkout')}:</b> {guest.checkout_date or '-'}</p>
 
-    pdf.set_font("DejaVu", "", 12)
-    pdf.cell(0, 8, f"{t('guest_name')}: {guest.name}", ln=True)
-    pdf.cell(0, 8, f"{t('room')}: {guest.room_number} ({guest.room_category})", ln=True)
-    pdf.cell(0, 8, f"{t('price_per_night')}: {guest.price_per_night:.2f} €", ln=True)
-    pdf.cell(0, 8, f"{t('checkin')}: {guest.checkin_date}", ln=True)
-    pdf.cell(0, 8, f"{t('checkout')}: {guest.checkout_date or '-'}", ln=True)
-
-    pdf.ln(5)
-    pdf.set_font("DejaVu", "", 13)
-    pdf.cell(0, 10, t("guest_details_nights"), ln=True)
-
-    pdf.set_font("DejaVu", "", 12)
-    pdf.cell(40, 8, t("night"))
-    pdf.cell(40, 8, t("paid"), ln=True)
+    <h3>{t('guest_details_nights')}</h3>
+    <table border="1" width="100%" align="center">
+        <thead>
+            <tr>
+                <th>{t('night')}</th>
+                <th>{t('paid')}</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
 
     for n in guest.nights:
-        pdf.cell(40, 8, str(n.number))
-        pdf.cell(40, 8, t("yes") if n.paid else t("no"), ln=True)
+        html += f"""
+        <tr>
+            <td>{n.number}</td>
+            <td>{t('yes') if n.paid else t('no')}</td>
+        </tr>
+        """
+
+    html += "</tbody></table>"
 
     paid_count = len([n for n in guest.nights if n.paid])
     unpaid_count = len([n for n in guest.nights if not n.paid])
     sum_paid = paid_count * guest.price_per_night
     sum_unpaid = unpaid_count * guest.price_per_night
 
-    pdf.ln(5)
-    pdf.set_font("DejaVu", "", 13)
-    pdf.cell(0, 10, t("summary"), ln=True)
+    html += f"""
+    <h3>{t('summary')}</h3>
+    <p>{t('paid_nights')}: {paid_count} (Summe: {sum_paid:.2f} €)</p>
+    <p>{t('unpaid_nights')}: {unpaid_count} (Summe: {sum_unpaid:.2f} €)</p>
+    """
 
-    pdf.set_font("DejaVu", "", 12)
-    pdf.cell(0, 8, f"{t('paid_nights')}: {paid_count} (Summe: {sum_paid:.2f} €)", ln=True)
-    pdf.cell(0, 8, f"{t('unpaid_nights')}: {unpaid_count} (Summe: {sum_unpaid:.2f} €)", ln=True)
-
-    pdf.ln(10)
-    pdf.set_font("DejaVu", "", 10)
-    pdf.cell(0, 8, "PDF generated automatically.", ln=True)
+    pdf.write_html(html)
 
     return pdf.output(dest="S").encode("latin1")
