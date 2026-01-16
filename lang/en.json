@@ -11,7 +11,7 @@
   "no_rooms": "No rooms available.",
   "you_have_rooms": "You own {count} rooms:",
   "room_item": "Room {number} – {category}",
- "download_receipt_pdf": "Download receipt as PDF"
+  "download_receipt_pdf": "Download receipt as PDF",
 
   "receipt_for_guest": "Receipt for guest",
   "guest_name": "Name",
@@ -90,15 +90,16 @@
   "page_guest_list": "Guest list",
   "page_search": "Search",
   "page_room_management": "Room management",
-  "page_checkout": "Checkout"
+  "page_checkout": "Checkout",
+
+  "dashboard": "Dashboard",
+  "stats_current_guests": "Currently checked-in guests",
+  "stats_checked_out": "Checked-out guests",
+  "stats_rooms_total": "Total rooms",
+  "stats_rooms_free": "Free rooms",
+  "stats_rooms_occupied": "Occupied rooms",
+  "stats_revenue": "Revenue (paid)",
+  "stats_unpaid": "Outstanding balance",
+  "chart_revenue_title": "Revenue per guest",
+  "chart_occupancy_title": "Room occupancy"
 }
-"dashboard": "Dashboard",
-"stats_current_guests": "Currently checked-in guests",
-"stats_checked_out": "Checked-out guests",
-"stats_rooms_total": "Total rooms",
-"stats_rooms_free": "Free rooms",
-"stats_rooms_occupied": "Occupied rooms",
-"stats_revenue": "Revenue (paid)",
-"stats_unpaid": "Outstanding balance",
-"chart_revenue_title": "Revenue per guest",
-"chart_occupancy_title": "Room occupancy"

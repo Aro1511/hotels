@@ -11,7 +11,7 @@
   "no_rooms": "Keine Räume vorhanden.",
   "you_have_rooms": "Du besitzt {count} Räume:",
   "room_item": "Zimmer {number} – {category}",
- "download_receipt_pdf": "Beleg als PDF herunterladen"
+  "download_receipt_pdf": "Beleg als PDF herunterladen",
 
   "receipt_for_guest": "Beleg für Gast",
   "guest_name": "Name",
@@ -90,15 +90,16 @@
   "page_guest_list": "Gästeliste",
   "page_search": "Suche",
   "page_room_management": "Zimmerverwaltung",
-  "page_checkout": "Checkout"
+  "page_checkout": "Checkout",
+
+  "dashboard": "Dashboard",
+  "stats_current_guests": "Aktuell eingecheckte Gäste",
+  "stats_checked_out": "Ausgecheckte Gäste",
+  "stats_rooms_total": "Gesamtanzahl Zimmer",
+  "stats_rooms_free": "Freie Zimmer",
+  "stats_rooms_occupied": "Belegte Zimmer",
+  "stats_revenue": "Einnahmen (bezahlt)",
+  "stats_unpaid": "Offene Beträge",
+  "chart_revenue_title": "Einnahmen pro Gast",
+  "chart_occupancy_title": "Zimmerbelegung"
 }
-"dashboard": "Dashboard",
-"stats_current_guests": "Aktuell eingecheckte Gäste",
-"stats_checked_out": "Ausgecheckte Gäste",
-"stats_rooms_total": "Gesamtanzahl Zimmer",
-"stats_rooms_free": "Freie Zimmer",
-"stats_rooms_occupied": "Belegte Zimmer",
-"stats_revenue": "Einnahmen (bezahlt)",
-"stats_unpaid": "Offene Beträge",
-"chart_revenue_title": "Einnahmen pro Gast",
-"chart_occupancy_title": "Zimmerbelegung"
