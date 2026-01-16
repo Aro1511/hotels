@@ -1,110 +1,50 @@
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import mm
-from reportlab.lib import colors
+from fpdf import FPDF
 from datetime import datetime
 from models import Guest
 
 
-def generate_receipt_pdf(guest: Guest, t, hotel_name="Hotel"):
-    """
-    Erzeugt eine PDF-Rechnung für einen Gast.
-    Alle Texte sind über t() übersetzbar.
-    """
+def generate_receipt_pdf(guest: Guest, t):
+    pdf = FPDF()
+    pdf.add_page()
 
-    from io import BytesIO
-    buffer = BytesIO()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, t("receipt_for_guest"), ln=True)
 
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 8, f"{t('guest_name')}: {guest.name}", ln=True)
+    pdf.cell(0, 8, f"{t('room')}: {guest.room_number} ({guest.room_category})", ln=True)
+    pdf.cell(0, 8, f"{t('price_per_night')}: {guest.price_per_night:.2f} €", ln=True)
+    pdf.cell(0, 8, f"{t('checkin')}: {guest.checkin_date}", ln=True)
+    pdf.cell(0, 8, f"{t('checkout')}: {guest.checkout_date or '-'}", ln=True)
 
-    # ---------------------------------------------------------
-    # Header
-    # ---------------------------------------------------------
-    c.setFont("Helvetica-Bold", 18)
-    c.drawString(20 * mm, height - 20 * mm, hotel_name)
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, t("guest_details_nights"), ln=True)
 
-    c.setFont("Helvetica", 10)
-    c.drawString(
-        20 * mm,
-        height - 30 * mm,
-        f"{t('receipt_for_guest')} – {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    )
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(40, 8, t("night"))
+    pdf.cell(40, 8, t("paid"), ln=True)
 
-    # ---------------------------------------------------------
-    # Gastinformationen
-    # ---------------------------------------------------------
-    y = height - 50 * mm
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(20 * mm, y, t("guest_details_nights"))
-    y -= 8 * mm
-
-    c.setFont("Helvetica", 10)
-    c.drawString(20 * mm, y, f"{t('guest_name')}: {guest.name}")
-    y -= 6 * mm
-    c.drawString(20 * mm, y, f"{t('room')}: {guest.room_number} ({guest.room_category})")
-    y -= 6 * mm
-    c.drawString(20 * mm, y, f"{t('price_per_night')}: {guest.price_per_night:.2f} €")
-    y -= 6 * mm
-    c.drawString(20 * mm, y, f"{t('checkin')}: {guest.checkin_date}")
-    y -= 6 * mm
-    c.drawString(20 * mm, y, f"{t('checkout')}: {guest.checkout_date or '-'}")
-    y -= 10 * mm
-
-    # ---------------------------------------------------------
-    # Tabelle der Nächte
-    # ---------------------------------------------------------
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(20 * mm, y, t("guest_details_nights"))
-    y -= 8 * mm
-
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(20 * mm, y, t("night"))
-    c.drawString(60 * mm, y, t("paid"))
-    y -= 6 * mm
-
-    c.setFont("Helvetica", 10)
+    pdf.set_font("Arial", "", 12)
     for n in guest.nights:
-        c.drawString(20 * mm, y, str(n.number))
-        c.drawString(60 * mm, y, t("yes") if n.paid else t("no"))
-        y -= 6 * mm
+        pdf.cell(40, 8, str(n.number))
+        pdf.cell(40, 8, t("yes") if n.paid else t("no"), ln=True)
 
-    # ---------------------------------------------------------
-    # Summen
-    # ---------------------------------------------------------
     paid_count = len([n for n in guest.nights if n.paid])
     unpaid_count = len([n for n in guest.nights if not n.paid])
     sum_paid = paid_count * guest.price_per_night
     sum_unpaid = unpaid_count * guest.price_per_night
 
-    y -= 10 * mm
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(20 * mm, y, t("summary"))
-    y -= 8 * mm
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, t("summary"), ln=True)
 
-    c.setFont("Helvetica", 10)
-    c.drawString(
-        20 * mm,
-        y,
-        f"{t('paid_nights')}: {paid_count} (Summe: {sum_paid:.2f} €)"
-    )
-    y -= 6 * mm
-    c.drawString(
-        20 * mm,
-        y,
-        f"{t('unpaid_nights')}: {unpaid_count} (Summe: {sum_unpaid:.2f} €)"
-    )
-    y -= 10 * mm
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 8, f"{t('paid_nights')}: {paid_count} (Summe: {sum_paid:.2f} €)", ln=True)
+    pdf.cell(0, 8, f"{t('unpaid_nights')}: {unpaid_count} (Summe: {sum_unpaid:.2f} €)", ln=True)
 
-    # ---------------------------------------------------------
-    # Footer
-    # ---------------------------------------------------------
-    c.setFont("Helvetica-Oblique", 9)
-    c.setFillColor(colors.grey)
-    c.drawString(20 * mm, 10 * mm, t("guest_checked_out"))
+    pdf.ln(10)
+    pdf.set_font("Arial", "I", 10)
+    pdf.cell(0, 8, "PDF generated automatically.", ln=True)
 
-    c.save()
-
-    pdf_data = buffer.getvalue()
-    buffer.close()
-    return pdf_data
+    return pdf.output(dest="S").encode("latin1")
