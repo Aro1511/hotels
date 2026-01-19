@@ -188,188 +188,6 @@ def render_free_rooms():
 
 
 render_free_rooms()
-
-
-# ---------------------------------------------------------
-# CSV Export
-# ---------------------------------------------------------
-def export_receipt_csv(guest: Guest):
-    paid_count, unpaid_count, sum_paid, sum_unpaid = calculate_nights_summary(guest)
-
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=";")
-
-    writer.writerow([t("receipt_for_guest")])
-    writer.writerow([t("guest_name"), guest.name])
-    writer.writerow([t("room"), guest.room_number])
-    writer.writerow([t("category"), guest.room_category])
-    writer.writerow([t("price_per_night"), guest.price_per_night])
-    writer.writerow([t("checkin"), guest.checkin_date])
-    writer.writerow([t("checkout"), guest.checkout_date or "-"])
-    writer.writerow([])
-    writer.writerow([t("paid_nights"), paid_count])
-    writer.writerow([t("unpaid_nights"), unpaid_count])
-    writer.writerow([t("sum_paid"), sum_paid])
-    writer.writerow([t("sum_unpaid"), sum_unpaid])
-    writer.writerow([])
-    writer.writerow([t("night"), t("paid")])
-
-    for n in guest.nights:
-        writer.writerow([n.number, t("yes") if n.paid else t("no")])
-
-    return output.getvalue()
-
-
-# ---------------------------------------------------------
-# Accordion: Gastdetails
-# ---------------------------------------------------------
-def render_guest_accordion(guest: Guest, editable: bool = True):
-    guest_id = guest.id
-    is_open = st.session_state.open_guest_id == guest_id
-
-    arrow = "▾" if is_open else "▸"
-    label = f"{arrow} {guest.name}"
-
-    if st.button(label, key=f"guest_header_{guest_id}"):
-        if is_open:
-            st.session_state.open_guest_id = None
-        else:
-            st.session_state.open_guest_id = guest_id
-        st.rerun()
-
-    if is_open:
-        display_guest_details(guest, editable)
-
-
-# ---------------------------------------------------------
-# Gastdetails anzeigen
-# ---------------------------------------------------------
-def display_guest_details(guest: Guest, editable: bool = True):
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
-    st.write(f"**Zimmer:** {guest.room_number} ({guest.room_category})")
-    st.write(f"**Preis pro Nacht:** {guest.price_per_night:.2f} €")
-    st.write(f"**Check-in:** {guest.checkin_date}")
-    if guest.checkout_date:
-        st.write(f"**Check-out:** {guest.checkout_date}")
-    st.write(f"**Status:** {guest.status}")
-
-    st.markdown("### Nächte")
-    if not guest.nights:
-        st.info("Keine Nächte eingetragen")
-    else:
-        cols = st.columns([1, 2, 2])
-        cols[0].markdown("**Nacht**")
-        cols[1].markdown("**Bezahlt**")
-        cols[2].markdown("**Aktion**")
-
-        for n in guest.nights:
-            cols = st.columns([1, 2, 2])
-            cols[0].write(n.number)
-            cols[1].write("Ja" if n.paid else "Nein")
-
-            if editable:
-                if n.paid:
-                    if cols[2].button("Als unbezahlt markieren", key=f"unpaid_{guest.id}_{n.number}"):
-                        set_night_paid_status(hotel_id, guest.id, n.number, False)
-                        st.rerun()
-                else:
-                    if cols[2].button("Als bezahlt markieren", key=f"paid_{guest.id}_{n.number}"):
-                        set_night_paid_status(hotel_id, guest.id, n.number, True)
-                        st.rerun()
-
-    paid_count, unpaid_count, sum_paid, sum_unpaid = calculate_nights_summary(guest)
-    st.markdown("### Zusammenfassung")
-    st.write(f"**Bezahlte Nächte:** {paid_count} (Summe: {sum_paid:.2f} €)")
-    st.write(f"**Unbezahlte Nächte:** {unpaid_count} (Summe: {sum_unpaid:.2f} €)")
-
-    st.markdown("### Export")
-    csv_data = export_receipt_csv(guest)
-    st.download_button(
-        label="CSV herunterladen",
-        data=csv_data,
-        file_name=f"beleg_{guest.name.replace(' ', '_')}.csv",
-        mime="text/csv",
-    )
-
-    pdf_data = generate_receipt_pdf(guest, t)
-    st.download_button(
-        label="PDF herunterladen",
-        data=pdf_data,
-        file_name=f"beleg_{guest.name.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-    )
-
-    if editable:
-        st.markdown("### Nächte hinzufügen")
-        col_add1, col_add2 = st.columns(2)
-        with col_add1:
-            add_paid = st.button("Bezahlte Nacht hinzufügen")
-        with col_add2:
-            add_unpaid = st.button("Unbezahlte Nacht hinzufügen")
-
-        if add_paid:
-            add_night_to_guest(hotel_id, guest.id, paid=True)
-            st.rerun()
-
-        if add_unpaid:
-            add_night_to_guest(hotel_id, guest.id, paid=False)
-            st.rerun()
-
-        st.markdown("### Aktionen")
-        if guest.status == "checked_in":
-            if st.button("Gast auschecken", key=f"checkout_{guest.id}"):
-                checkout_guest(hotel_id, guest.id)
-                st.success("Gast wurde ausgecheckt")
-                st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-# ---------------------------------------------------------
-# Seite: Neuer Gast
-# ---------------------------------------------------------
-def page_neuer_gast():
-    st.header("Neuen Gast anlegen")
-
-    if st.session_state.guest_form_collapsed:
-        st.success("Gast gespeichert")
-        if st.button("Neuen Gast anlegen"):
-            st.session_state.guest_form_collapsed = False
-            st.rerun()
-        return
-
-    name = st.text_input("Name des Gastes")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        room_number = st.number_input("Zimmernummer", min_value=1, step=1)
-    with col2:
-        room_category = st.selectbox(
-            "Zimmerkategorie",
-            ["Einzel", "Doppel", "Familie", "Suite", "Sonstige"],
-        )
-
-    price_per_night = st.number_input(
-        "Preis pro Nacht", min_value=0.0, step=1.0, format="%.2f"
-    )
-
-    if st.button("Gast speichern"):
-        if not name:
-            st.error("Name ist erforderlich")
-        else:
-            new_guest = add_guest(
-                hotel_id,
-                name=name,
-                room_number=int(room_number),
-                room_category=room_category,
-                price_per_night=float(price_per_night),
-            )
-            st.session_state.auto_open_guest = new_guest.id
-            st.session_state.guest_form_collapsed = True
-            st.rerun()
-
-
 # ---------------------------------------------------------
 # Seite: Gästeliste
 # ---------------------------------------------------------
@@ -490,6 +308,44 @@ def page_checkout():
 
 
 # ---------------------------------------------------------
+# Einfaches Dashboard
+# ---------------------------------------------------------
+def page_dashboard():
+    st.header("Dashboard – Übersicht")
+
+    guests = list_all_guests(hotel_id, include_checked_out=True)
+    rooms = load_rooms(hotel_id)
+
+    current_guests = len([g for g in guests if g.status == "checked_in"])
+    checked_out = len([g for g in guests if g.status == "checked_out"])
+    total_rooms = len(rooms)
+    occupied_rooms = len([r for r in rooms if r.occupied])
+    free_rooms = total_rooms - occupied_rooms
+
+    revenue = sum(len([n for n in g.nights if n.paid]) * g.price_per_night for g in guests)
+    unpaid = sum(len([n for n in g.nights if not n.paid]) * g.price_per_night for g in guests)
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("Gäste")
+    st.write(f"Aktuell eingecheckt: **{current_guests}**")
+    st.write(f"Ausgecheckt: **{checked_out}**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("Zimmer")
+    st.write(f"Gesamt: **{total_rooms}**")
+    st.write(f"Belegt: **{occupied_rooms}**")
+    st.write(f"Frei: **{free_rooms}**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("Einnahmen")
+    st.write(f"Bezahlte Nächte: **{revenue:.2f} €**")
+    st.write(f"Unbezahlte Nächte: **{unpaid:.2f} €**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------
 # Hauptprogramm
 # ---------------------------------------------------------
 def main():
@@ -516,6 +372,7 @@ def main():
         page = st.radio(
             "Seite auswählen",
             (
+                "Dashboard",
                 "Neuen Gast anlegen",
                 "Gästeliste",
                 "Gäste suchen",
@@ -524,7 +381,9 @@ def main():
             ),
         )
 
-    if page == "Neuen Gast anlegen":
+    if page == "Dashboard":
+        page_dashboard()
+    elif page == "Neuen Gast anlegen":
         page_neuer_gast()
     elif page == "Gästeliste":
         page_gaesteliste()
