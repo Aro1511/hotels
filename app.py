@@ -31,6 +31,11 @@ def load_css():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception:
         pass
+try:
+    with open("style.css") as f:
+        st.success("CSS wurde gefunden ✔️")
+except:
+    st.error("CSS wurde NICHT gefunden ❌")
 
 
 # ---------------------------------------------------------
