@@ -6,20 +6,19 @@
 footer {visibility: hidden;}
 header {visibility: hidden;}
 
-.stApp {
-    background-color: transparent;
-}
-
-.block-container {
-    padding-top: 1rem;
-    padding-left: 0;
-    padding-right: 0;
-}
-
 body, .stApp {
     background-color: #FFE3C4 !important;
     color: #2E2E2E !important;
     font-family: "Segoe UI", sans-serif !important;
+}
+
+/* ---------------------------------------------------------
+   BLOCK CONTAINER
+--------------------------------------------------------- */
+.block-container {
+    padding-top: 1rem;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 /* ---------------------------------------------------------
@@ -84,9 +83,8 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ---------------------------------------------------------
-   ACCORDION (Eigenes System)
+   ACCORDION
 --------------------------------------------------------- */
-
 .accordion-header {
     background: #F5D7B2;
     padding: 14px 18px;
@@ -135,62 +133,78 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ---------------------------------------------------------
-   MOBILE OPTIMIZATION + SIDEBAR FIX
+   MOBILE SIDEBAR – NEW & IMPROVED
 --------------------------------------------------------- */
+
 @media (max-width: 768px) {
 
-    /* Hauptinhalt mit etwas Abstand, damit Touch-Gesten sauber funktionieren */
+    /* Overlay hinter der Sidebar */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.45);
+        z-index: 998;
+        display: none;
+    }
+
+    /* Sidebar selbst */
+    [data-testid="stSidebar"] {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        height: 100vh !important;
+        width: 80% !important;
+        max-width: 300px !important;
+        background-color: #FFF !important;
+        box-shadow: 4px 0 12px rgba(0,0,0,0.25);
+        z-index: 999 !important;
+        transform: translateX(-100%);
+        transition: transform 0.35s ease;
+    }
+
+    /* Sidebar geöffnet */
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        transform: translateX(0);
+    }
+
+    /* Overlay sichtbar wenn Sidebar offen */
+    [data-testid="stSidebar"][aria-expanded="true"] ~ .sidebar-overlay {
+        display: block;
+    }
+
+    /* Hauptinhalt */
     .block-container {
         padding-left: 10px !important;
         padding-right: 10px !important;
-        position: relative !important;
-        z-index: 1 !important;
     }
 
-    /* Karten kompakter auf Mobile */
-    .card {
-        padding: 16px !important;
-        margin-bottom: 16px !important;
-    }
-
-    /* Buttons größer und besser klickbar */
+    /* Buttons größer */
     .stButton > button {
         width: 100% !important;
         padding: 14px 20px !important;
         font-size: 1.1rem !important;
     }
 
-    /* Inputs full width und besser lesbar */
+    /* Inputs größer */
     input, textarea, select, .stTextInput > div > div > input {
         font-size: 1.05rem !important;
         padding: 12px !important;
     }
 
-    /* Accordion-Header größer */
+    /* Accordion größer */
     .accordion-header {
         padding: 16px !important;
         font-size: 1.1rem !important;
     }
 
-    /* Überschriften etwas kleiner */
+    /* Überschriften kleiner */
     h1 {
         font-size: 1.8rem !important;
     }
     h2 {
         font-size: 1.5rem !important;
-    }
-
-    /* Sidebar als Overlay über allem */
-    [data-testid="stSidebar"] {
-        position: fixed !important;
-        z-index: 9999 !important;
-        width: 80% !important;
-        max-width: 300px !important;
-        height: 100% !important;
-    }
-
-    /* Close-Button der Sidebar immer oben */
-    [data-testid="stSidebar"] button {
-        z-index: 10000 !important;
     }
 }
