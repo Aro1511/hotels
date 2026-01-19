@@ -33,9 +33,6 @@ def load_css():
         pass
 
 
-load_css()
-
-
 # ---------------------------------------------------------
 # Sprache & Grundkonfiguration
 # ---------------------------------------------------------
@@ -46,7 +43,13 @@ lang_choice = st.session_state.get("language", "de")
 texts = load_language(lang_choice)
 t = translator(texts)
 
-st.set_page_config(page_title=t("app_title"), layout="wide")
+st.set_page_config(
+    page_title=t("app_title"),
+    layout="wide",
+    initial_sidebar_state="collapsed",  # Sidebar startet zugeklappt (hilft auf Mobile)
+)
+
+load_css()
 
 
 # ---------------------------------------------------------
@@ -501,7 +504,8 @@ def page_dashboard():
         revenue += paid_count * g.price_per_night
         unpaid += unpaid_count * g.price_per_night
 
-    col1, col2, col3 = st.columns(3)
+    # etwas entspannteres Layout für Mobile
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         st.metric(t("stats_current_guests"), current_guests)
         st.metric(t("stats_checked_out"), checked_out)

@@ -133,78 +133,63 @@ input:focus, textarea:focus, select:focus {
 ::-webkit-scrollbar-thumb:hover {
     background: #A06F3C;
 }
-/* ---------------------------------------------------------
-   MOBILE OPTIMIZATION
---------------------------------------------------------- */
 
+/* ---------------------------------------------------------
+   MOBILE OPTIMIZATION + SIDEBAR FIX
+--------------------------------------------------------- */
 @media (max-width: 768px) {
 
-    /* Reduce padding for mobile */
+    /* Hauptinhalt mit etwas Abstand, damit Touch-Gesten sauber funktionieren */
     .block-container {
         padding-left: 10px !important;
         padding-right: 10px !important;
+        position: relative !important;
+        z-index: 1 !important;
     }
 
-    /* Make cards full width */
+    /* Karten kompakter auf Mobile */
     .card {
         padding: 16px !important;
         margin-bottom: 16px !important;
     }
 
-    /* Larger buttons for touch screens */
+    /* Buttons größer und besser klickbar */
     .stButton > button {
         width: 100% !important;
         padding: 14px 20px !important;
         font-size: 1.1rem !important;
     }
 
-    /* Inputs full width */
-    input, textarea, select {
+    /* Inputs full width und besser lesbar */
+    input, textarea, select, .stTextInput > div > div > input {
         font-size: 1.05rem !important;
         padding: 12px !important;
     }
 
-    /* Accordion header bigger */
+    /* Accordion-Header größer */
     .accordion-header {
         padding: 16px !important;
         font-size: 1.1rem !important;
     }
 
-    /* Make columns stack vertically */
-    [class*="css-"] > .stColumn {
-        flex-direction: column !important;
-    }
-
-    /* Reduce header size */
+    /* Überschriften etwas kleiner */
     h1 {
         font-size: 1.8rem !important;
     }
     h2 {
         font-size: 1.5rem !important;
     }
-}
-/* ---------------------------------------------------------
-   MOBILE FIX FOR STREAMLIT SIDEBAR
---------------------------------------------------------- */
-@media (max-width: 768px) {
 
-    /* Sidebar soll immer über allem liegen */
+    /* Sidebar als Overlay über allem */
     [data-testid="stSidebar"] {
         position: fixed !important;
         z-index: 9999 !important;
         width: 80% !important;
         max-width: 300px !important;
+        height: 100% !important;
     }
 
-    /* Hauptinhalt darf Sidebar nicht blockieren */
-    .block-container {
-        position: relative !important;
-        z-index: 1 !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-    }
-
-    /* Verhindert, dass andere Elemente den Close-Button überdecken */
+    /* Close-Button der Sidebar immer oben */
     [data-testid="stSidebar"] button {
         z-index: 10000 !important;
     }
