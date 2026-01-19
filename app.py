@@ -31,11 +31,6 @@ def load_css():
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except Exception:
         pass
-try:
-    with open("style.css") as f:
-        st.success("CSS wurde gefunden ✔️")
-except:
-    st.error("CSS wurde NICHT gefunden ❌")
 
 
 # ---------------------------------------------------------
@@ -47,14 +42,14 @@ if "language" not in st.session_state:
 lang_choice = st.session_state.get("language", "de")
 texts = load_language(lang_choice)
 t = translator(texts)
-
+load_css()
 st.set_page_config(
     page_title=t("app_title"),
     layout="wide",
     initial_sidebar_state="collapsed",  # Sidebar startet zugeklappt (hilft auf Mobile)
 )
 
-load_css()
+
 
 
 # ---------------------------------------------------------
