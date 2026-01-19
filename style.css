@@ -183,3 +183,29 @@ input:focus, textarea:focus, select:focus {
         font-size: 1.5rem !important;
     }
 }
+/* ---------------------------------------------------------
+   MOBILE FIX FOR STREAMLIT SIDEBAR
+--------------------------------------------------------- */
+@media (max-width: 768px) {
+
+    /* Sidebar soll immer über allem liegen */
+    [data-testid="stSidebar"] {
+        position: fixed !important;
+        z-index: 9999 !important;
+        width: 80% !important;
+        max-width: 300px !important;
+    }
+
+    /* Hauptinhalt darf Sidebar nicht blockieren */
+    .block-container {
+        position: relative !important;
+        z-index: 1 !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    /* Verhindert, dass andere Elemente den Close-Button überdecken */
+    [data-testid="stSidebar"] button {
+        z-index: 10000 !important;
+    }
+}
