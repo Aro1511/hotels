@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-   GLOBAL STYLE – Warm & Friendly Modern UI
+   GLOBAL STYLE – SAFE VERSION
 --------------------------------------------------------- */
 
 #MainMenu {visibility: hidden;}
@@ -24,7 +24,6 @@ body, .stApp {
 h1, h2, h3, h4, h5, h6 {
     color: #8B4513 !important;
     font-weight: 700 !important;
-    letter-spacing: 0.5px;
 }
 
 /* ---------------------------------------------------------
@@ -36,12 +35,6 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 14px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     margin-bottom: 20px;
-    transition: all 0.2s ease;
-}
-
-.card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
 }
 
 /* ---------------------------------------------------------
@@ -55,11 +48,6 @@ input, textarea, select, .stTextInput > div > div > input {
     padding: 8px !important;
 }
 
-input:focus, textarea:focus, select:focus {
-    border-color: #8B4513 !important;
-    box-shadow: 0 0 4px rgba(139, 69, 19, 0.4) !important;
-}
-
 /* ---------------------------------------------------------
    BUTTONS
 --------------------------------------------------------- */
@@ -70,79 +58,16 @@ input:focus, textarea:focus, select:focus {
     border-radius: 10px !important;
     padding: 10px 24px !important;
     border: none !important;
-    transition: all 0.2s ease;
-}
-
-.stButton > button:hover {
-    background-color: #A05A2C !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
 /* ---------------------------------------------------------
-   ACCORDION
+   MOBILE FIXES – SAFE
 --------------------------------------------------------- */
-.accordion-header {
-    background: #F5D7B2;
-    padding: 14px 18px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 700;
-    color: #5A3A1E;
-    margin-bottom: 8px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-    transition: all 0.2s ease;
-}
-
-.accordion-header:hover {
-    background: #EEC89A;
-    transform: translateY(-2px);
-}
-
-.accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.35s ease;
-}
-
-.accordion-content.open {
-    max-height: 2000px;
-}
-
-/* ---------------------------------------------------------
-   SCROLLBAR
---------------------------------------------------------- */
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: #FFE3C4;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #C49A6C;
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #A06F3C;
-}
-
-/* ---------------------------------------------------------
-   MOBILE FIXES (SAFE)
---------------------------------------------------------- */
-
 @media (max-width: 768px) {
 
     .block-container {
         padding-left: 10px !important;
         padding-right: 10px !important;
-    }
-
-    .card {
-        padding: 16px !important;
-        margin-bottom: 16px !important;
     }
 
     .stButton > button {
@@ -154,17 +79,5 @@ input:focus, textarea:focus, select:focus {
     input, textarea, select, .stTextInput > div > div > input {
         font-size: 1.05rem !important;
         padding: 12px !important;
-    }
-
-    .accordion-header {
-        padding: 16px !important;
-        font-size: 1.1rem !important;
-    }
-
-    h1 {
-        font-size: 1.8rem !important;
-    }
-    h2 {
-        font-size: 1.5rem !important;
     }
 }
