@@ -42,14 +42,14 @@ if "language" not in st.session_state:
 lang_choice = st.session_state.get("language", "de")
 texts = load_language(lang_choice)
 t = translator(texts)
-load_css()
+
 st.set_page_config(
     page_title=t("app_title"),
     layout="wide",
-    initial_sidebar_state="collapsed",  # Sidebar startet zugeklappt (hilft auf Mobile)
+    initial_sidebar_state="collapsed",
 )
 
-
+load_css()
 
 
 # ---------------------------------------------------------
@@ -482,68 +482,6 @@ def page_checkout():
 
 
 # ---------------------------------------------------------
-# Seite: Dashboard
-# ---------------------------------------------------------
-def page_dashboard():
-    st.header(t("dashboard"))
-
-    guests = list_all_guests(hotel_id, include_checked_out=True)
-    rooms = load_rooms(hotel_id)
-
-    current_guests = len([g for g in guests if g.status == "checked_in"])
-    checked_out = len([g for g in guests if g.status == "checked_out"])
-    total_rooms = len(rooms)
-    occupied_rooms = len([r for r in rooms if r.occupied])
-    free_rooms = total_rooms - occupied_rooms
-
-    revenue = 0
-    unpaid = 0
-    for g in guests:
-        paid_count = len([n for n in g.nights if n.paid])
-        unpaid_count = len([n for n in g.nights if not n.paid])
-        revenue += paid_count * g.price_per_night
-        unpaid += unpaid_count * g.price_per_night
-
-    # etwas entspannteres Layout für Mobile
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col1:
-        st.metric(t("stats_current_guests"), current_guests)
-        st.metric(t("stats_checked_out"), checked_out)
-    with col2:
-        st.metric(t("stats_rooms_total"), total_rooms)
-        st.metric(t("stats_rooms_occupied"), occupied_rooms)
-    with col3:
-        st.metric(t("stats_rooms_free"), free_rooms)
-        st.metric(t("stats_revenue"), f"{revenue:.2f} €")
-
-    st.metric(t("stats_unpaid"), f"{unpaid:.2f} €")
-
-    st.markdown("---")
-
-    if guests:
-        df_revenue = pd.DataFrame({
-            "Gast": [g.name for g in guests],
-            "Einnahmen": [
-                len([n for n in g.nights if n.paid]) * g.price_per_night
-                for g in guests
-            ]
-        })
-
-        st.subheader(t("chart_revenue_title"))
-        st.bar_chart(df_revenue, x="Gast", y="Einnahmen")
-
-    st.markdown("---")
-
-    df_rooms = pd.DataFrame({
-        "Status": [t("occupied"), t("free")],
-        "Anzahl": [occupied_rooms, free_rooms]
-    })
-
-    st.subheader(t("chart_occupancy_title"))
-    st.bar_chart(df_rooms, x="Status", y="Anzahl")
-
-
-# ---------------------------------------------------------
 # Hauptprogramm
 # ---------------------------------------------------------
 def main():
@@ -570,7 +508,6 @@ def main():
         page = st.radio(
             t("select_page"),
             (
-                t("dashboard"),
                 t("page_new_guest"),
                 t("page_guest_list"),
                 t("page_search"),
@@ -579,9 +516,7 @@ def main():
             ),
         )
 
-    if page == t("dashboard"):
-        page_dashboard()
-    elif page == t("page_new_guest"):
+    if page == t("page_new_guest"):
         page_neuer_gast()
     elif page == t("page_guest_list"):
         page_gaesteliste()
