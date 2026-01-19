@@ -132,7 +132,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ---------------------------------------------------------
-   MOBILE FIXES (STABLE & ACCESSIBLE)
+   MOBILE FIXES
 --------------------------------------------------------- */
 
 @media (max-width: 768px) {
@@ -170,7 +170,6 @@ input:focus, textarea:focus, select:focus {
         font-size: 1.5rem !important;
     }
 
-    /* Sidebar – keine Animation, keine Position-Änderung */
     [data-testid="stSidebar"] {
         width: 80% !important;
         max-width: 300px !important;
