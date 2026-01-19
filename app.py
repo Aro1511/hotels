@@ -138,6 +138,7 @@ def show_modern_header():
 
 
 show_modern_header()
+st.markdown('<div class="sidebar-overlay"></div>', unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
