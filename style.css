@@ -4,7 +4,6 @@
 
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
 
 body, .stApp {
     background-color: #FFE3C4 !important;
@@ -133,7 +132,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ---------------------------------------------------------
-   MOBILE FIXES (STABLE VERSION)
+   MOBILE FIXES (STABLE & ACCESSIBLE)
 --------------------------------------------------------- */
 
 @media (max-width: 768px) {
@@ -171,7 +170,7 @@ input:focus, textarea:focus, select:focus {
         font-size: 1.5rem !important;
     }
 
-    /* Sidebar NICHT fixed – Streamlit regelt das */
+    /* Sidebar – keine Animation, keine Position-Änderung */
     [data-testid="stSidebar"] {
         width: 80% !important;
         max-width: 300px !important;
