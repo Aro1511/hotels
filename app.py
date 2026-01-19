@@ -24,7 +24,7 @@ from pdf_generator import generate_receipt_pdf
 # ---------------------------------------------------------
 # CSS laden
 # ---------------------------------------------------------
-def load_css():
+#def load_css():
     try:
         with open("style.css") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
