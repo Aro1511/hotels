@@ -16,8 +16,6 @@ body, .stApp {
 --------------------------------------------------------- */
 .block-container {
     padding-top: 1rem;
-    padding-left: 0;
-    padding-right: 0;
 }
 
 /* ---------------------------------------------------------
@@ -132,7 +130,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* ---------------------------------------------------------
-   MOBILE FIXES
+   MOBILE FIXES (SAFE)
 --------------------------------------------------------- */
 
 @media (max-width: 768px) {
@@ -168,10 +166,5 @@ input:focus, textarea:focus, select:focus {
     }
     h2 {
         font-size: 1.5rem !important;
-    }
-
-    [data-testid="stSidebar"] {
-        width: 80% !important;
-        max-width: 300px !important;
     }
 }
