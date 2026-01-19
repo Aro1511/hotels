@@ -489,6 +489,51 @@ def page_checkout():
 
 
 # ---------------------------------------------------------
+# Seite: Dashboard
+# ---------------------------------------------------------
+def page_dashboard():
+    st.header("Dashboard – Übersicht")
+
+    guests = list_all_guests(hotel_id, include_checked_out=True)
+    rooms = load_rooms(hotel_id)
+
+    current_guests = len([g for g in guests if g.status == "checked_in"])
+    checked_out = len([g for g in guests if g.status == "checked_out"])
+
+    total_rooms = len(rooms)
+    occupied_rooms = len([r for r in rooms if r.occupied])
+    free_rooms = total_rooms - occupied_rooms
+
+    revenue = sum(
+        len([n for n in g.nights if n.paid]) * g.price_per_night
+        for g in guests
+    )
+    unpaid = sum(
+        len([n for n in g.nights if not n.paid]) * g.price_per_night
+        for g in guests
+    )
+
+    st.markdown("### Gäste")
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.write(f"Aktuell eingecheckt: **{current_guests}**")
+    st.write(f"Ausgecheckt: **{checked_out}**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("### Zimmer")
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.write(f"Gesamt: **{total_rooms}**")
+    st.write(f"Belegt: **{occupied_rooms}**")
+    st.write(f"Frei: **{free_rooms}**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("### Einnahmen")
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.write(f"Bezahlte Nächte: **{revenue:.2f} €**")
+    st.write(f"Unbezahlte Nächte: **{unpaid:.2f} €**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------
 # Hauptprogramm
 # ---------------------------------------------------------
 def main():
@@ -515,6 +560,7 @@ def main():
         page = st.radio(
             "Seite auswählen",
             (
+                "Dashboard",
                 "Neuen Gast anlegen",
                 "Gästeliste",
                 "Gäste suchen",
@@ -523,7 +569,9 @@ def main():
             ),
         )
 
-    if page == "Neuen Gast anlegen":
+    if page == "Dashboard":
+        page_dashboard()
+    elif page == "Neuen Gast anlegen":
         page_neuer_gast()
     elif page == "Gästeliste":
         page_gaesteliste()
