@@ -6,6 +6,10 @@ from utils import load_language, translator
 
 SUPERADMIN_EMAIL = "admin@hotel.de"
 
+
+# ---------------------------------------------------------
+# Superadmin automatisch erstellen (ohne Passwort im Code)
+# ---------------------------------------------------------
 def ensure_superadmin_exists():
     texts = load_language(st.session_state.get("language", "de"))
     t = translator(texts)
@@ -13,19 +17,18 @@ def ensure_superadmin_exists():
     users_ref = db.collection("users")
     query = users_ref.where("role", "==", "superadmin").limit(1).stream()
 
-    exists = False
-    for _ in query:
-        exists = True
+    exists = any(True for _ in query)
 
     if exists:
         return True
 
-    st.title(t("superadmin_setup_title"))
-    st.info(t("superadmin_setup_info"))
+    # Superadmin existiert nicht → Passwort anfordern
+    st.title("Superadmin einrichten")
+    st.info("Bitte ein Passwort für den Superadmin festlegen.")
 
-    pw = st.text_input(t("superadmin_password"), type="password")
+    pw = st.text_input("Superadmin-Passwort", type="password")
 
-    if st.button(t("superadmin_create")):
+    if st.button("Superadmin erstellen"):
         if not pw:
             st.error("Bitte ein Passwort eingeben.")
             return False
@@ -45,16 +48,24 @@ def ensure_superadmin_exists():
     return False
 
 
+# ---------------------------------------------------------
+# Benutzer anhand E-Mail laden
+# ---------------------------------------------------------
 def get_user_by_email(email: str):
     users_ref = db.collection("users")
     query = users_ref.where("email", "==", email).limit(1).stream()
+
     for doc in query:
         user = doc.to_dict()
         user["id"] = doc.id
         return user
+
     return None
 
 
+# ---------------------------------------------------------
+# Login prüfen
+# ---------------------------------------------------------
 def validate_login(email: str, password: str):
     if not ensure_superadmin_exists():
         return None
@@ -62,13 +73,19 @@ def validate_login(email: str, password: str):
     user = get_user_by_email(email)
     if not user:
         return None
+
     if not user.get("active", True):
         return None
+
     if verify_password(password, user["password_hash"]):
         return user
+
     return None
 
 
+# ---------------------------------------------------------
+# Benutzer erstellen
+# ---------------------------------------------------------
 def create_user(email: str, password: str, role: str, tenant_id: str):
     return db.collection("users").add({
         "email": email,
@@ -80,19 +97,30 @@ def create_user(email: str, password: str, role: str, tenant_id: str):
     })
 
 
+# ---------------------------------------------------------
+# Benutzer deaktivieren
+# ---------------------------------------------------------
 def deactivate_user(user_id: str):
     db.collection("users").document(user_id).update({"active": False})
 
 
+# ---------------------------------------------------------
+# Benutzer löschen
+# ---------------------------------------------------------
 def delete_user(user_id: str):
     db.collection("users").document(user_id).delete()
 
 
+# ---------------------------------------------------------
+# Benutzer eines Mandanten auflisten
+# ---------------------------------------------------------
 def list_users_by_tenant(tenant_id: str):
     users_ref = db.collection("users").where("tenant_id", "==", tenant_id).stream()
     users = []
+
     for doc in users_ref:
         u = doc.to_dict()
         u["id"] = doc.id
         users.append(u)
+
     return users
