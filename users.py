@@ -1,4 +1,3 @@
-
 import streamlit as st
 from firebase_db import db
 from auth import hash_password, verify_password
@@ -7,22 +6,26 @@ from datetime import datetime
 SUPERADMIN_EMAIL = "admin@hotel.de"
 
 
+# ---------------------------------------------------------
+# Superadmin prüfen / erstellen
+# ---------------------------------------------------------
 def ensure_superadmin_exists():
-    st.write("DEBUG: ensure_superadmin_exists läuft")
     users_ref = db.collection("users")
 
-
-    # Prüfen, ob Superadmin existiert
-    existing = list(users_ref.where("role", "==", "superadmin").limit(1).stream())
+    # Prüfen, ob bereits ein Superadmin existiert
+    existing = list(
+        users_ref.where("role", "==", "superadmin").limit(1).stream()
+    )
     if existing:
-        return True
+        return True  # Superadmin existiert schon
 
+    # Setup anzeigen
     st.title("Superadmin einrichten")
     st.info("Bitte ein Passwort für den Superadmin festlegen.")
 
     pw = st.text_input("Superadmin-Passwort", type="password")
 
-    # Speichern, sobald ein Passwort eingegeben wurde – kein Button nötig
+    # Sobald ein Passwort eingegeben wurde → speichern
     if pw:
         users_ref.add({
             "email": SUPERADMIN_EMAIL,
@@ -37,9 +40,8 @@ def ensure_superadmin_exists():
         st.session_state.clear()
         st.rerun()
 
+    # Solange noch kein Passwort eingegeben wurde
     return False
-
-
 
 
 # ---------------------------------------------------------
@@ -61,10 +63,6 @@ def get_user_by_email(email: str):
 # Login prüfen
 # ---------------------------------------------------------
 def validate_login(email: str, password: str):
-    # Superadmin sicherstellen
-    if not ensure_superadmin_exists():
-        return None
-
     user = get_user_by_email(email)
     if not user:
         return None
