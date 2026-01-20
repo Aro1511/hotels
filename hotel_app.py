@@ -13,9 +13,10 @@ if "user" not in st.session_state:
 
 user = st.session_state["user"]
 
-if user.get("role") != "customer":
-    st.error("Nur Kunden können diese Seite nutzen.")
+if user.get("role") not in ["customer", "superadmin"]:
+    st.error("Nur Kunden oder Superadmins können diese Seite nutzen.")
     st.stop()
+
 
 hotel_id = user["tenant_id"]
 
