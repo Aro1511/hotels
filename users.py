@@ -9,6 +9,7 @@ SUPERADMIN_EMAIL = "admin@hotel.de"
 
 def ensure_superadmin_exists():
     users_ref = db.collection("users")
+st.write("DEBUG: ensure_superadmin_exists läuft")
 
     # Prüfen, ob Superadmin existiert
     existing = list(users_ref.where("role", "==", "superadmin").limit(1).stream())
