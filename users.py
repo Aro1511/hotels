@@ -3,22 +3,21 @@ from firebase_db import db
 from auth import hash_password, verify_password
 from datetime import datetime
 
-# Standard-Superadmin
 SUPERADMIN_EMAIL = "admin@hotel.de"
 
 
 # ---------------------------------------------------------
-# Prüfen, ob Superadmin existiert – falls nicht: erstellen
+# Superadmin prüfen / erstellen
 # ---------------------------------------------------------
 def ensure_superadmin_exists():
     users_ref = db.collection("users")
-    query = users_ref.where("role", "==", "superadmin").limit(1).stream()
 
     # Prüfen, ob Superadmin existiert
-    for _ in query:
-        return True  # existiert bereits
+    existing = list(users_ref.where("role", "==", "superadmin").limit(1).stream())
+    if existing:
+        return True  # Superadmin existiert
 
-    # Wenn kein Superadmin existiert → Setup anzeigen
+    # Wenn nicht → Setup anzeigen
     st.title("Superadmin einrichten")
     st.info("Bitte ein Passwort für den Superadmin festlegen.")
 
