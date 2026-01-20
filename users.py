@@ -1,13 +1,3 @@
-import streamlit as st
-from firebase_db import db
-
-# DEBUG: Firestore Test
-try:
-    test_ref = db.collection("debug_test").document("ping")
-    test_ref.set({"ok": True})
-    st.write("🔥 Firestore OK – Verbindung funktioniert")
-except Exception as e:
-    st.write("❌ Firestore Fehler:", e)
 
 import streamlit as st
 from firebase_db import db
@@ -17,29 +7,21 @@ from datetime import datetime
 SUPERADMIN_EMAIL = "admin@hotel.de"
 
 
-# ---------------------------------------------------------
-# Superadmin prüfen / erstellen
-# ---------------------------------------------------------
 def ensure_superadmin_exists():
     users_ref = db.collection("users")
 
     # Prüfen, ob Superadmin existiert
     existing = list(users_ref.where("role", "==", "superadmin").limit(1).stream())
     if existing:
-        return True  # Superadmin existiert
+        return True
 
-    # Wenn nicht → Setup anzeigen
     st.title("Superadmin einrichten")
     st.info("Bitte ein Passwort für den Superadmin festlegen.")
 
     pw = st.text_input("Superadmin-Passwort", type="password")
 
-    if st.button("Superadmin erstellen"):
-        if not pw:
-            st.error("Bitte ein Passwort eingeben.")
-            return False
-
-        # Superadmin speichern
+    # Speichern, sobald ein Passwort eingegeben wurde – kein Button nötig
+    if pw:
         users_ref.add({
             "email": SUPERADMIN_EMAIL,
             "password_hash": hash_password(pw),
@@ -53,7 +35,9 @@ def ensure_superadmin_exists():
         st.session_state.clear()
         st.rerun()
 
-    return False  # Warten, bis Passwort eingegeben wurde
+    return False
+
+
 
 
 # ---------------------------------------------------------
