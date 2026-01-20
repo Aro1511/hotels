@@ -1,28 +1,24 @@
+import streamlit as st
 from firebase_db import db
 from auth import hash_password, verify_password
 from datetime import datetime
-import streamlit as st
-from utils import load_language, translator
 
+# Standard-Superadmin
 SUPERADMIN_EMAIL = "admin@hotel.de"
 
 
 # ---------------------------------------------------------
-# Superadmin automatisch erstellen (ohne Passwort im Code)
+# Prüfen, ob Superadmin existiert – falls nicht: erstellen
 # ---------------------------------------------------------
 def ensure_superadmin_exists():
-    texts = load_language(st.session_state.get("language", "de"))
-    t = translator(texts)
-
     users_ref = db.collection("users")
     query = users_ref.where("role", "==", "superadmin").limit(1).stream()
 
-    exists = any(True for _ in query)
+    # Prüfen, ob Superadmin existiert
+    for _ in query:
+        return True  # existiert bereits
 
-    if exists:
-        return True
-
-    # Superadmin existiert nicht → Passwort anfordern
+    # Wenn kein Superadmin existiert → Setup anzeigen
     st.title("Superadmin einrichten")
     st.info("Bitte ein Passwort für den Superadmin festlegen.")
 
@@ -33,6 +29,7 @@ def ensure_superadmin_exists():
             st.error("Bitte ein Passwort eingeben.")
             return False
 
+        # Superadmin speichern
         users_ref.add({
             "email": SUPERADMIN_EMAIL,
             "password_hash": hash_password(pw),
@@ -42,10 +39,11 @@ def ensure_superadmin_exists():
             "created_at": datetime.utcnow()
         })
 
-        st.success("Superadmin wurde erfolgreich erstellt.")
+        st.success("Superadmin wurde erfolgreich erstellt. Bitte erneut einloggen.")
+        st.session_state.clear()
         st.rerun()
 
-    return False
+    return False  # Warten, bis Passwort eingegeben wurde
 
 
 # ---------------------------------------------------------
@@ -67,6 +65,7 @@ def get_user_by_email(email: str):
 # Login prüfen
 # ---------------------------------------------------------
 def validate_login(email: str, password: str):
+    # Superadmin sicherstellen
     if not ensure_superadmin_exists():
         return None
 
@@ -77,6 +76,7 @@ def validate_login(email: str, password: str):
     if not user.get("active", True):
         return None
 
+    # Passwort prüfen
     if verify_password(password, user["password_hash"]):
         return user
 
