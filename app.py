@@ -22,6 +22,21 @@ from pdf_generator import generate_receipt_pdf
 
 
 # ---------------------------------------------------------
+# Login-Prüfung & hotel_id aus User
+# ---------------------------------------------------------
+if "user" not in st.session_state:
+    st.switch_page("login.py")
+
+user = st.session_state["user"]
+
+if user["role"] != "customer":
+    st.error("Nur Kunden können diese Seite nutzen.")
+    st.stop()
+
+hotel_id = user["tenant_id"]
+
+
+# ---------------------------------------------------------
 # CSS laden
 # ---------------------------------------------------------
 def load_css():
@@ -49,15 +64,6 @@ st.set_page_config(
 )
 
 load_css()
-
-
-# ---------------------------------------------------------
-# HOTEL-ID (ohne Login)
-# ---------------------------------------------------------
-if "hotel_id" not in st.session_state:
-    st.session_state.hotel_id = "default_hotel"
-
-hotel_id = st.session_state.hotel_id
 
 
 # ---------------------------------------------------------
@@ -540,6 +546,7 @@ def main():
     with st.sidebar:
         st.title("Navigation")
 
+        # Sprache wählen
         current_lang = st.session_state.get("language", "de")
         lang_options = {
             "Deutsch": "de",
@@ -554,6 +561,13 @@ def main():
         if new_lang != current_lang:
             st.session_state["language"] = new_lang
             st.rerun()
+
+        st.markdown("---")
+
+        # Logout-Button
+        if st.button("Abmelden"):
+            st.session_state.clear()
+            st.switch_page("login.py")
 
         st.markdown("---")
 
