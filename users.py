@@ -1,5 +1,16 @@
 import streamlit as st
 from firebase_db import db
+
+# DEBUG: Firestore Test
+try:
+    test_ref = db.collection("debug_test").document("ping")
+    test_ref.set({"ok": True})
+    st.write("🔥 Firestore OK – Verbindung funktioniert")
+except Exception as e:
+    st.write("❌ Firestore Fehler:", e)
+
+import streamlit as st
+from firebase_db import db
 from auth import hash_password, verify_password
 from datetime import datetime
 
