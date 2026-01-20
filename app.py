@@ -15,7 +15,12 @@ def main():
     # ---------------------------------------------------------
     # Wenn bereits eingeloggt → Hotel-App laden
     # ---------------------------------------------------------
-    if "user" in st.session_state:
+if "user" in st.session_state:
+    if st.session_state["user"]["role"] == "superadmin":
+        import superadmin_app
+        superadmin_app.main()
+        return
+    else:
         import hotel_app
         hotel_app.main()
         return
