@@ -1,5 +1,5 @@
 import streamlit as st
-from users import validate_login
+from users import validate_login, ensure_superadmin_exists
 from utils import load_language, translator
 
 def main():
@@ -18,6 +18,11 @@ def main():
     if "user" in st.session_state:
         import hotel_app
         hotel_app.main()
+        return
+    # ---------------------------------------------------------
+    # Superadmin prüfen
+    # ---------------------------------------------------------
+    if not ensure_superadmin_exists():
         return
 
     # ---------------------------------------------------------
