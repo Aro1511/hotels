@@ -17,7 +17,6 @@ if user.get("role") not in ["customer", "superadmin"]:
     st.error("Nur Kunden oder Superadmins können diese Seite nutzen.")
     st.stop()
 
-
 hotel_id = user["tenant_id"]
 
 # ---------------------------------------------------------
@@ -65,25 +64,20 @@ load_css()
 
 
 # ---------------------------------------------------------
-# SESSION-STATE
+# SESSION-STATE INITIALISIERUNG
 # ---------------------------------------------------------
-if "page" not in st.session_state:
-    st.session_state.page = "Dashboard"
+defaults = {
+    "page": "Dashboard",
+    "open_guest_id": None,
+    "show_rooms": False,
+    "show_free_rooms": False,
+    "auto_open_guest": None,
+    "guest_form_collapsed": False,
+}
 
-if "open_guest_id" not in st.session_state:
-    st.session_state.open_guest_id = None
-
-if "show_rooms" not in st.session_state:
-    st.session_state.show_rooms = False
-
-if "show_free_rooms" not in st.session_state:
-    st.session_state.show_free_rooms = False
-
-if "auto_open_guest" not in st.session_state:
-    st.session_state.auto_open_guest = None
-
-if "guest_form_collapsed" not in st.session_state:
-    st.session_state.guest_form_collapsed = False
+for key, value in defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 
 # ---------------------------------------------------------
@@ -316,24 +310,24 @@ def main():
 
         st.markdown("---")
 
+        pages = [
+            "Dashboard",
+            "Neuen Gast anlegen",
+            "Gästeliste",
+            "Gäste suchen",
+            "Zimmerverwaltung",
+            "Ausgecheckte Gäste",
+        ]
+
+        current_page = st.session_state.get("page", "Dashboard")
+
+        if current_page not in pages:
+            current_page = "Dashboard"
+
         st.session_state.page = st.radio(
             "Seite",
-            [
-                "Dashboard",
-                "Neuen Gast anlegen",
-                "Gästeliste",
-                "Gäste suchen",
-                "Zimmerverwaltung",
-                "Ausgecheckte Gäste",
-            ],
-            index=[
-                "Dashboard",
-                "Neuen Gast anlegen",
-                "Gästeliste",
-                "Gäste suchen",
-                "Zimmerverwaltung",
-                "Ausgecheckte Gäste",
-            ].index(st.session_state.page),
+            pages,
+            index=pages.index(current_page),
         )
 
     if st.session_state.page == "Dashboard":
