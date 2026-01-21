@@ -5,6 +5,28 @@ from PIL import Image
 import base64
 
 # ---------------------------------------------------------
+# SESSION-STATE FIX – MUSS GANZ OBEN STEHEN
+# ---------------------------------------------------------
+if "page" not in st.session_state:
+    st.session_state.page = "Dashboard"
+
+if "open_guest_id" not in st.session_state:
+    st.session_state.open_guest_id = None
+
+if "show_rooms" not in st.session_state:
+    st.session_state.show_rooms = False
+
+if "show_free_rooms" not in st.session_state:
+    st.session_state.show_free_rooms = False
+
+if "auto_open_guest" not in st.session_state:
+    st.session_state.auto_open_guest = None
+
+if "guest_form_collapsed" not in st.session_state:
+    st.session_state.guest_form_collapsed = False
+
+
+# ---------------------------------------------------------
 # LOGIN-PRÜFUNG
 # ---------------------------------------------------------
 if "user" not in st.session_state:
@@ -63,23 +85,6 @@ t = translator(texts)
 
 st.set_page_config(page_title=t("app_title"), layout="wide")
 load_css()
-
-
-# ---------------------------------------------------------
-# SESSION-STATE INITIALISIERUNG (WICHTIG!)
-# ---------------------------------------------------------
-defaults = {
-    "page": "Dashboard",
-    "open_guest_id": None,
-    "show_rooms": False,
-    "show_free_rooms": False,
-    "auto_open_guest": None,
-    "guest_form_collapsed": False,
-}
-
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
 
 
 # ---------------------------------------------------------
@@ -315,7 +320,6 @@ def main():
 
         st.markdown("---")
 
-        # Buttons für besetzte / freie Räume
         st.session_state.show_rooms = st.checkbox(
             "Besetzte Räume anzeigen",
             value=st.session_state.show_rooms
