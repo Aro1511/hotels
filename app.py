@@ -14,10 +14,12 @@ def main():
     st.set_page_config(page_title=t("app_title"), layout="centered")
 
     # ---------------------------------------------------------
-    # Wenn bereits eingeloggt → Hotel-App laden
+    # Wenn bereits eingeloggt → Hotel- oder Superadmin-App laden
     # ---------------------------------------------------------
     if "user" in st.session_state:
-        if st.session_state["user"]["role"] == "superadmin":
+        role = st.session_state["user"]["role"]
+
+        if role == "superadmin":
             import superadmin_app
             superadmin_app.main()
             return
@@ -27,7 +29,7 @@ def main():
             return
 
     # ---------------------------------------------------------
-    # Superadmin prüfen
+    # Superadmin prüfen (falls keiner existiert → erstellen)
     # ---------------------------------------------------------
     if not ensure_superadmin_exists():
         return
