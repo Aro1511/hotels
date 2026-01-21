@@ -13,10 +13,12 @@ if "user" not in st.session_state:
 
 user = st.session_state["user"]
 
+# Nur Kunden & Superadmins dürfen ins Hotel-Frontend
 if user.get("role") not in ["customer", "superadmin"]:
     st.error("Nur Kunden oder Superadmins können diese Seite nutzen.")
     st.stop()
 
+# WICHTIG: hotel_id = tenant_id → trennt die Daten pro Kunde
 hotel_id = user["tenant_id"]
 
 # ---------------------------------------------------------
@@ -221,6 +223,10 @@ def page_dashboard():
     st.write(f"Ausgecheckt: {len([g for g in guests if g.status=='checked_out'])}")
     st.write(f"Zimmer gesamt: {len(rooms)}")
 
+    # Räume-Übersicht im Dashboard
+    render_rooms()
+    render_free_rooms()
+
 
 def page_new_guest():
     st.header("Neuen Gast anlegen")
@@ -304,9 +310,16 @@ def main():
     with st.sidebar:
         st.title("Navigation")
 
+        # Logout für Kunden/Superadmin im Hotel-Frontend
         if st.button("Abmelden"):
             st.session_state.clear()
             st.rerun()
+
+        st.markdown("---")
+
+        # Buttons für besetzte / freie Räume
+        st.session_state.show_rooms = st.checkbox("Besetzte Räume anzeigen", value=st.session_state.show_rooms)
+        st.session_state.show_free_rooms = st.checkbox("Freie Räume anzeigen", value=st.session_state.show_free_rooms)
 
         st.markdown("---")
 
@@ -320,7 +333,6 @@ def main():
         ]
 
         current_page = st.session_state.get("page", "Dashboard")
-
         if current_page not in pages:
             current_page = "Dashboard"
 

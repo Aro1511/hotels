@@ -2,6 +2,16 @@ import streamlit as st
 from firebase_db import db
 
 def main():
+    with st.sidebar:
+        st.title("Superadmin")
+
+        if st.button("Abmelden"):
+            st.session_state.clear()
+            st.rerun()
+
+        st.markdown("---")
+        st.info("Superadmin-Bereich")
+
     st.title("Superadmin – Verwaltung")
 
     # ---------------------------------------------------------
@@ -17,9 +27,6 @@ def main():
 
     st.subheader("Benutzerübersicht")
 
-    # ---------------------------------------------------------
-    # Benutzerliste anzeigen
-    # ---------------------------------------------------------
     for u in users:
         email = u.get("email", "⚠️ Keine E-Mail")
         role = u.get("role", "unbekannt")
