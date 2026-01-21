@@ -37,7 +37,7 @@ from logic import (
 )
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
-from utils import load_language, translator
+    from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf
 
 
@@ -66,7 +66,7 @@ load_css()
 
 
 # ---------------------------------------------------------
-# SESSION-STATE INITIALISIERUNG
+# SESSION-STATE INITIALISIERUNG (WICHTIG!)
 # ---------------------------------------------------------
 defaults = {
     "page": "Dashboard",
@@ -223,7 +223,6 @@ def page_dashboard():
     st.write(f"Ausgecheckt: {len([g for g in guests if g.status=='checked_out'])}")
     st.write(f"Zimmer gesamt: {len(rooms)}")
 
-    # Räume-Übersicht im Dashboard
     render_rooms()
     render_free_rooms()
 
@@ -310,7 +309,6 @@ def main():
     with st.sidebar:
         st.title("Navigation")
 
-        # Logout für Kunden/Superadmin im Hotel-Frontend
         if st.button("Abmelden"):
             st.session_state.clear()
             st.rerun()
@@ -318,8 +316,15 @@ def main():
         st.markdown("---")
 
         # Buttons für besetzte / freie Räume
-        st.session_state.show_rooms = st.checkbox("Besetzte Räume anzeigen", value=st.session_state.show_rooms)
-        st.session_state.show_free_rooms = st.checkbox("Freie Räume anzeigen", value=st.session_state.show_free_rooms)
+        st.session_state.show_rooms = st.checkbox(
+            "Besetzte Räume anzeigen",
+            value=st.session_state.show_rooms
+        )
+
+        st.session_state.show_free_rooms = st.checkbox(
+            "Freie Räume anzeigen",
+            value=st.session_state.show_free_rooms
+        )
 
         st.markdown("---")
 
