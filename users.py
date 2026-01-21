@@ -1,4 +1,3 @@
-import streamlit as st
 from firebase_db import db
 from auth import hash_password, verify_password
 from datetime import datetime
@@ -15,7 +14,6 @@ def ensure_superadmin_exists():
     if any(users_ref):
         return True
 
-    # Superadmin erzeugen
     db.collection("users").add({
         "email": SUPERADMIN_EMAIL,
         "password": hash_password(SUPERADMIN_PASSWORD),
@@ -55,8 +53,12 @@ def validate_login(email, password):
         user = doc.to_dict()
         user["id"] = doc.id
 
+        # Falls ein alter/kaputter Datensatz ohne Passwort existiert → überspringen
+        if "password" not in user:
+            continue
+
         if not user.get("active", True):
-            return None
+            continue
 
         if verify_password(password, user["password"]):
             return user
