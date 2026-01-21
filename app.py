@@ -29,7 +29,7 @@ def main():
             return
 
     # ---------------------------------------------------------
-    # Superadmin prüfen (falls keiner existiert → erstellen)
+    # Superadmin prüfen
     # ---------------------------------------------------------
     if not ensure_superadmin_exists():
         return
@@ -49,7 +49,6 @@ def main():
             st.error("Login fehlgeschlagen.")
             return
 
-        # Benutzer speichern
         st.session_state["user"] = user
         st.success("Login erfolgreich.")
         st.rerun()
