@@ -4,7 +4,9 @@ from firebase_db import db
 def main():
     st.title("Superadmin – Verwaltung")
 
+    # ---------------------------------------------------------
     # Benutzer laden
+    # ---------------------------------------------------------
     users_ref = db.collection("users").stream()
     users = []
 
@@ -15,8 +17,15 @@ def main():
 
     st.subheader("Benutzerübersicht")
 
+    # ---------------------------------------------------------
+    # Benutzerliste anzeigen
+    # ---------------------------------------------------------
     for u in users:
-        st.write(f"📧 {u['email']} – Rolle: {u['role']} – Aktiv: {u.get('active', True)}")
+        email = u.get("email", "⚠️ Keine E-Mail")
+        role = u.get("role", "unbekannt")
+        active = u.get("active", True)
+
+        st.write(f"📧 {email} – Rolle: {role} – Aktiv: {active}")
 
         col1, col2 = st.columns(2)
 
@@ -28,6 +37,9 @@ def main():
             db.collection("users").document(u["id"]).delete()
             st.rerun()
 
+    # ---------------------------------------------------------
+    # Neuen Benutzer anlegen
+    # ---------------------------------------------------------
     st.markdown("---")
     st.subheader("Neuen Mandanten / Benutzer anlegen")
 
