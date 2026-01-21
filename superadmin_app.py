@@ -14,9 +14,7 @@ def main():
 
     st.title("Superadmin – Verwaltung")
 
-    # ---------------------------------------------------------
     # Benutzer laden
-    # ---------------------------------------------------------
     users_ref = db.collection("users").stream()
     users = []
 
@@ -44,15 +42,11 @@ def main():
             db.collection("users").document(u["id"]).delete()
             st.rerun()
 
-    # ---------------------------------------------------------
-    # Neuen Benutzer anlegen
-    # ---------------------------------------------------------
     st.markdown("---")
-    st.subheader("Neuen Mandanten / Benutzer anlegen")
+    st.subheader("Neuen Kunden anlegen")
 
     email = st.text_input("E-Mail")
     password = st.text_input("Passwort", type="password")
-    role = st.selectbox("Rolle", ["customer", "admin"])
     tenant_id = st.text_input("Tenant-ID")
 
     if st.button("Benutzer erstellen"):
@@ -60,6 +54,6 @@ def main():
             st.error("Bitte alle Felder ausfüllen.")
         else:
             from users import create_user
-            create_user(email, password, role, tenant_id)
+            create_user(email, password, "customer", tenant_id)
             st.success("Benutzer erstellt.")
             st.rerun()
