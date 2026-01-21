@@ -37,7 +37,7 @@ from logic import (
 )
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
-    from utils import load_language, translator
+from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf
 
 
