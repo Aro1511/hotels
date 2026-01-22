@@ -5,7 +5,7 @@ from PIL import Image
 import base64
 
 # ---------------------------------------------------------
-# SESSION-STATE INITIALISIERUNG ALS FUNKTION
+# SESSION-STATE INITIALISIERUNG
 # ---------------------------------------------------------
 DEFAULTS = {
     "page": "Dashboard",
@@ -25,18 +25,21 @@ def init_state():
 # ---------------------------------------------------------
 # LOGIN-PRÜFUNG
 # ---------------------------------------------------------
-if "user" not in st.session_state:
+if "user" not in st.session_state or not st.session_state["user"]:
     st.write("Bitte zuerst einloggen…")
     st.stop()
 
-user = st.session_state["user"]
-
-if user.get("role") not in ["customer", "superadmin"]:
-    st.error("Nur Kunden oder Superadmins können diese Seite nutzen.")
+# User stabilisieren (wichtig!)
+user = st.session_state.get("user")
+if not user:
+    st.error("Benutzer verloren – bitte erneut einloggen.")
     st.stop()
 
-# WICHTIG: Mandant eindeutig bestimmen
-hotel_id = user["tenant_id"]
+# Mandant bestimmen
+hotel_id = user.get("tenant_id")
+if not hotel_id:
+    st.error("Fehler: Kein Mandant (tenant_id) gefunden.")
+    st.stop()
 
 
 # ---------------------------------------------------------
@@ -81,7 +84,7 @@ load_css()
 
 
 # ---------------------------------------------------------
-# LOGO / HEADER
+# HEADER
 # ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
@@ -120,7 +123,7 @@ def show_header():
 
 show_header()
 
-# WICHTIG: Benutzer + Mandant anzeigen
+# Benutzerinfo anzeigen
 st.caption(f"Eingeloggt als: {user.get('email')} – Mandant: {hotel_id}")
 
 
@@ -235,6 +238,7 @@ def page_new_guest():
         else:
             add_guest(hotel_id, name, int(room), category, float(price))
             st.success("Gast gespeichert")
+            st.rerun()
 
 
 def page_guest_list():
@@ -305,9 +309,7 @@ def main():
     with st.sidebar:
         st.title("Navigation")
 
-        if st.button("Abmelden"):
-            st.session_state.clear()
-            st.rerun()
+        logout = st.button("Abmelden")
 
         st.markdown("---")
 
@@ -341,6 +343,10 @@ def main():
             pages,
             index=pages.index(current_page),
         )
+
+    if logout:
+        st.session_state.clear()
+        st.rerun()
 
     if st.session_state.page == "Dashboard":
         page_dashboard()
