@@ -1,50 +1,8 @@
 import streamlit as st
-import csv
 import io
-from PIL import Image
 import base64
+from PIL import Image
 
-# ---------------------------------------------------------
-# SESSION-STATE INITIALISIERUNG
-# ---------------------------------------------------------
-DEFAULTS = {
-    "page": "Dashboard",
-    "open_guest_id": None,
-    "show_rooms": False,
-    "show_free_rooms": False,
-    "auto_open_guest": None,
-    "guest_form_collapsed": False,
-}
-
-def init_state():
-    for key, value in DEFAULTS.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
-
-
-# ---------------------------------------------------------
-# LOGIN-PRÜFUNG
-# ---------------------------------------------------------
-if "user" not in st.session_state or not st.session_state["user"]:
-    st.write("Bitte zuerst einloggen…")
-    st.stop()
-
-# User stabilisieren (wichtig!)
-user = st.session_state.get("user")
-if not user:
-    st.error("Benutzer verloren – bitte erneut einloggen.")
-    st.stop()
-
-# Mandant bestimmen
-hotel_id = user.get("tenant_id")
-if not hotel_id:
-    st.error("Fehler: Kein Mandant (tenant_id) gefunden.")
-    st.stop()
-
-
-# ---------------------------------------------------------
-# IMPORTS
-# ---------------------------------------------------------
 from logic import (
     add_room,
     add_guest,
@@ -61,9 +19,25 @@ from models import Guest
 from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf
 
+# ---------------------------------------------------------
+# Session-State Defaults
+# ---------------------------------------------------------
+DEFAULTS = {
+    "page": "Dashboard",
+    "open_guest_id": None,
+    "show_rooms": False,
+    "show_free_rooms": False,
+    "auto_open_guest": None,
+    "guest_form_collapsed": False,
+}
+
+def init_state():
+    for key, value in DEFAULTS.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 # ---------------------------------------------------------
-# CSS LADEN
+# CSS laden
 # ---------------------------------------------------------
 def load_css():
     try:
@@ -72,27 +46,15 @@ def load_css():
     except:
         pass
 
-
-if "language" not in st.session_state:
-    st.session_state.language = "de"
-
-texts = load_language(st.session_state.language)
-t = translator(texts)
-
-st.set_page_config(page_title=t("app_title"), layout="wide")
-load_css()
-
-
 # ---------------------------------------------------------
-# HEADER
+# Hilfsfunktionen für Header
 # ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
 
-
-def show_header():
+def show_header(t):
     try:
         logo = Image.open("logo.png")
         encoded = image_to_base64(logo)
@@ -121,17 +83,11 @@ def show_header():
     except:
         st.title(t("header_title"))
 
-show_header()
-
-# Benutzerinfo anzeigen
-st.caption(f"Eingeloggt als: {user.get('email')} – Mandant: {hotel_id}")
-
-
 # ---------------------------------------------------------
-# RENDER-FUNKTIONEN
+# Render-Funktionen
 # ---------------------------------------------------------
-def render_rooms():
-    if not st.session_state.show_rooms:
+def render_rooms(hotel_id: str):
+    if not st.session_state.get("show_rooms", False):
         return
 
     rooms = load_rooms(hotel_id)
@@ -145,9 +101,8 @@ def render_rooms():
         for r in occupied:
             st.write(f"• Zimmer {r.number} ({r.category})")
 
-
-def render_free_rooms():
-    if not st.session_state.show_free_rooms:
+def render_free_rooms(hotel_id: str):
+    if not st.session_state.get("show_free_rooms", False):
         return
 
     rooms = load_rooms(hotel_id)
@@ -161,15 +116,14 @@ def render_free_rooms():
         for r in free:
             st.write(f"• Zimmer {r.number} ({r.category})")
 
-
-def render_guest_accordion(guest: Guest, editable=True):
+def render_guest_accordion(hotel_id: str, guest: Guest, editable: bool = True):
     gid = guest.id
-    is_open = st.session_state.open_guest_id == gid
+    is_open = st.session_state.get("open_guest_id") == gid
 
     label = ("▾ " if is_open else "▸ ") + guest.name
 
     if st.button(label, key=f"guest_{gid}"):
-        st.session_state.open_guest_id = None if is_open else gid
+        st.session_state["open_guest_id"] = None if is_open else gid
         st.rerun()
 
     if not is_open:
@@ -206,11 +160,10 @@ def render_guest_accordion(guest: Guest, editable=True):
             st.success("Gast ausgecheckt")
             st.rerun()
 
-
 # ---------------------------------------------------------
-# SEITEN
+# Seiten
 # ---------------------------------------------------------
-def page_dashboard():
+def page_dashboard(hotel_id: str):
     st.header("Dashboard")
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
@@ -220,11 +173,10 @@ def page_dashboard():
     st.write(f"Ausgecheckt: {len([g for g in guests if g.status=='checked_out'])}")
     st.write(f"Zimmer gesamt: {len(rooms)}")
 
-    render_rooms()
-    render_free_rooms()
+    render_rooms(hotel_id)
+    render_free_rooms(hotel_id)
 
-
-def page_new_guest():
+def page_new_guest(hotel_id: str):
     st.header("Neuen Gast anlegen")
 
     name = st.text_input("Name")
@@ -240,8 +192,7 @@ def page_new_guest():
             st.success("Gast gespeichert")
             st.rerun()
 
-
-def page_guest_list():
+def page_guest_list(hotel_id: str):
     st.header("Gästeliste")
 
     guests = list_all_guests(hotel_id, include_checked_out=False)
@@ -251,10 +202,9 @@ def page_guest_list():
         return
 
     for g in guests:
-        render_guest_accordion(g)
+        render_guest_accordion(hotel_id, g)
 
-
-def page_search():
+def page_search(hotel_id: str):
     st.header("Suche")
 
     q = st.text_input("Name eingeben")
@@ -265,10 +215,9 @@ def page_search():
             st.warning("Keine Ergebnisse")
         else:
             for g in results:
-                render_guest_accordion(g)
+                render_guest_accordion(hotel_id, g)
 
-
-def page_rooms():
+def page_rooms(hotel_id: str):
     st.header("Zimmerverwaltung")
 
     number = st.number_input("Zimmernummer", min_value=1)
@@ -285,8 +234,7 @@ def page_rooms():
     for r in rooms:
         st.write(f"Zimmer {r.number} – {r.category} – {'Belegt' if r.occupied else 'Frei'}")
 
-
-def page_checkout():
+def page_checkout(hotel_id: str):
     st.header("Ausgecheckte Gäste")
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
@@ -297,15 +245,38 @@ def page_checkout():
         return
 
     for g in checked_out:
-        render_guest_accordion(g, editable=False)
-
+        render_guest_accordion(hotel_id, g, editable=False)
 
 # ---------------------------------------------------------
-# HAUPTFUNKTION
+# Hauptfunktion
 # ---------------------------------------------------------
 def main():
+    # User prüfen
+    if "user" not in st.session_state or not st.session_state["user"]:
+        st.write("Bitte zuerst einloggen…")
+        st.stop()
+
+    user = st.session_state["user"]
+    hotel_id = user.get("tenant_id")
+
+    if not hotel_id:
+        st.error("Fehler: Kein Mandant (tenant_id) gefunden.")
+        st.stop()
+
+    # Sprache laden
+    lang = st.session_state.get("language", "de")
+    texts = load_language(lang)
+    t = translator(texts)
+
+    st.set_page_config(page_title=t("app_title"), layout="wide")
+    load_css()
+
     init_state()
 
+    show_header(t)
+    st.caption(f"Eingeloggt als: {user.get('email')} – Mandant: {hotel_id}")
+
+    # Sidebar
     with st.sidebar:
         st.title("Navigation")
 
@@ -313,14 +284,14 @@ def main():
 
         st.markdown("---")
 
-        st.session_state.show_rooms = st.checkbox(
+        st.session_state["show_rooms"] = st.checkbox(
             "Besetzte Räume anzeigen",
-            value=st.session_state.get("show_rooms", False)
+            value=st.session_state.get("show_rooms", False),
         )
 
-        st.session_state.show_free_rooms = st.checkbox(
+        st.session_state["show_free_rooms"] = st.checkbox(
             "Freie Räume anzeigen",
-            value=st.session_state.get("show_free_rooms", False)
+            value=st.session_state.get("show_free_rooms", False),
         )
 
         st.markdown("---")
@@ -338,29 +309,33 @@ def main():
         if current_page not in pages:
             current_page = "Dashboard"
 
-        st.session_state.page = st.radio(
+        st.session_state["page"] = st.radio(
             "Seite",
             pages,
             index=pages.index(current_page),
         )
 
     if logout:
+        # Nur beim Logout wirklich alles löschen
+        lang = st.session_state.get("language", "de")
         st.session_state.clear()
+        st.session_state["language"] = lang
         st.rerun()
 
-    if st.session_state.page == "Dashboard":
-        page_dashboard()
-    elif st.session_state.page == "Neuen Gast anlegen":
-        page_new_guest()
-    elif st.session_state.page == "Gästeliste":
-        page_guest_list()
-    elif st.session_state.page == "Gäste suchen":
-        page_search()
-    elif st.session_state.page == "Zimmerverwaltung":
-        page_rooms()
-    elif st.session_state.page == "Ausgecheckte Gäste":
-        page_checkout()
+    page = st.session_state["page"]
 
+    if page == "Dashboard":
+        page_dashboard(hotel_id)
+    elif page == "Neuen Gast anlegen":
+        page_new_guest(hotel_id)
+    elif page == "Gästeliste":
+        page_guest_list(hotel_id)
+    elif page == "Gäste suchen":
+        page_search(hotel_id)
+    elif page == "Zimmerverwaltung":
+        page_rooms(hotel_id)
+    elif page == "Ausgecheckte Gäste":
+        page_checkout(hotel_id)
 
 if __name__ == "__main__":
     main()
