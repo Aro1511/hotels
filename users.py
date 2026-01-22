@@ -16,6 +16,7 @@ def ensure_superadmin_exists():
 
     db.collection("users").add({
         "email": SUPERADMIN_EMAIL,
+        "email_lower": SUPERADMIN_EMAIL.lower(),
         "password": hash_password(SUPERADMIN_PASSWORD),
         "role": "superadmin",
         "tenant_id": "superadmin",
@@ -33,8 +34,11 @@ def create_user(email, password, role, tenant_id):
     if role != "customer":
         raise ValueError("Nur 'customer' ist erlaubt.")
 
+    email_clean = email.strip().lower()
+
     db.collection("users").add({
-        "email": email,
+        "email": email_clean,
+        "email_lower": email_clean,
         "password": hash_password(password),
         "role": "customer",
         "tenant_id": tenant_id,
@@ -44,10 +48,13 @@ def create_user(email, password, role, tenant_id):
 
 
 # ---------------------------------------------------------
-# Login prüfen
+# Login prüfen (Case-insensitive, eindeutig, stabil)
 # ---------------------------------------------------------
 def validate_login(email, password):
-    users_ref = db.collection("users").where("email", "==", email).stream()
+    email_clean = email.strip().lower()
+
+    # Exakt passenden User suchen
+    users_ref = db.collection("users").where("email_lower", "==", email_clean).stream()
 
     for doc in users_ref:
         user = doc.to_dict()
