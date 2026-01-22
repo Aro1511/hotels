@@ -17,18 +17,16 @@ from logic import (
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
 from utils import load_language, translator
-from pdf_generator import generate_receipt_pdf
+
 
 # ---------------------------------------------------------
-# Session-State Defaults
+# Session Defaults
 # ---------------------------------------------------------
 DEFAULTS = {
     "page": "Dashboard",
     "open_guest_id": None,
     "show_rooms": False,
     "show_free_rooms": False,
-    "auto_open_guest": None,
-    "guest_form_collapsed": False,
 }
 
 def init_state():
@@ -36,8 +34,9 @@ def init_state():
         if key not in st.session_state:
             st.session_state[key] = value
 
+
 # ---------------------------------------------------------
-# CSS laden
+# CSS
 # ---------------------------------------------------------
 def load_css():
     try:
@@ -46,8 +45,9 @@ def load_css():
     except:
         pass
 
+
 # ---------------------------------------------------------
-# Hilfsfunktionen für Header
+# Header
 # ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
@@ -83,40 +83,11 @@ def show_header(t):
     except:
         st.title(t("header_title"))
 
+
 # ---------------------------------------------------------
-# Render-Funktionen
+# Guest Accordion
 # ---------------------------------------------------------
-def render_rooms(hotel_id: str):
-    if not st.session_state.get("show_rooms", False):
-        return
-
-    rooms = load_rooms(hotel_id)
-    occupied = [r for r in rooms if r.occupied]
-
-    st.subheader("Besetzte Räume")
-
-    if not occupied:
-        st.info("Keine besetzten Räume")
-    else:
-        for r in occupied:
-            st.write(f"• Zimmer {r.number} ({r.category})")
-
-def render_free_rooms(hotel_id: str):
-    if not st.session_state.get("show_free_rooms", False):
-        return
-
-    rooms = load_rooms(hotel_id)
-    free = [r for r in rooms if not r.occupied]
-
-    st.subheader("Freie Räume")
-
-    if not free:
-        st.info("Keine freien Räume")
-    else:
-        for r in free:
-            st.write(f"• Zimmer {r.number} ({r.category})")
-
-def render_guest_accordion(hotel_id: str, guest: Guest, editable: bool = True):
+def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     gid = guest.id
     is_open = st.session_state.get("open_guest_id") == gid
 
@@ -129,129 +100,186 @@ def render_guest_accordion(hotel_id: str, guest: Guest, editable: bool = True):
     if not is_open:
         return
 
-    st.write(f"Zimmer: {guest.room_number} ({guest.room_category})")
-    st.write(f"Preis pro Nacht: {guest.price_per_night} €")
-    st.write(f"Check-in: {guest.checkin_date}")
+    st.write(f"{t('guest_details_room')}: {guest.room_number} ({guest.room_category})")
+    st.write(f"{t('guest_details_price')}: {guest.price_per_night} €")
+    st.write(f"{t('checkin')}: {guest.checkin_date}")
     if guest.checkout_date:
-        st.write(f"Check-out: {guest.checkout_date}")
+        st.write(f"{t('checkout')}: {guest.checkout_date}")
 
-    st.write("### Nächte")
+    # -----------------------------
+    # Nächte
+    # -----------------------------
+    st.write(f"### {t('guest_details_nights')}")
 
     for n in guest.nights:
         col1, col2, col3 = st.columns([1, 1, 2])
-        col1.write(n.number)
-        col2.write("Ja" if n.paid else "Nein")
+        col1.write(f"{t('night')} {n.number}")
+        col2.write(t("yes") if n.paid else t("no"))
 
         if editable:
             if n.paid:
-                if col3.button("Als unbezahlt markieren", key=f"unpaid_{gid}_{n.number}"):
+                if col3.button(t("set_unpaid"), key=f"unpaid_{gid}_{n.number}"):
                     set_night_paid_status(hotel_id, gid, n.number, False)
                     st.rerun()
             else:
-                if col3.button("Als bezahlt markieren", key=f"paid_{gid}_{n.number}"):
+                if col3.button(t("set_paid"), key=f"paid_{gid}_{n.number}"):
                     set_night_paid_status(hotel_id, gid, n.number, True)
                     st.rerun()
 
-    st.write("### Aktionen")
+    # -----------------------------
+    # Neue Nacht hinzufügen
+    # -----------------------------
+    st.write(f"### {t('add_nights')}")
+
+    colA, colB = st.columns([1, 2])
+    paid_new = colA.checkbox(t("paid"), key=f"paid_new_{gid}")
+
+    if colB.button(t("add_paid_night") if paid_new else t("add_unpaid_night"), key=f"add_night_{gid}"):
+        add_night_to_guest(hotel_id, gid, paid_new)
+        st.success(t("guest_saved"))
+        st.rerun()
+
+    # -----------------------------
+    # Preisübersicht
+    # -----------------------------
+    st.write(f"### {t('summary')}")
+
+    count_paid, count_unpaid, sum_paid, sum_unpaid = calculate_nights_summary(guest)
+
+    st.write(f"{t('paid_nights')}: {count_paid}")
+    st.write(f"{t('unpaid_nights')}: {count_unpaid}")
+    st.write(f"{t('sum_paid')}: {sum_paid} €")
+    st.write(f"{t('sum_unpaid')}: {sum_unpaid} €")
+    st.write(f"**Gesamt: {sum_paid + sum_unpaid} €**")
+
+    # -----------------------------
+    # Aktionen
+    # -----------------------------
+    st.write(f"### {t('guest_actions')}")
 
     if editable and guest.status == "checked_in":
-        if st.button("Gast auschecken", key=f"checkout_{gid}"):
+        if st.button(t("checkout_guest"), key=f"checkout_{gid}"):
             checkout_guest(hotel_id, gid)
-            st.success("Gast ausgecheckt")
+            st.success(t("guest_checked_out"))
             st.rerun()
 
+    if guest.status == "checked_out":
+        if st.button(t("delete_guest_button"), key=f"delete_{gid}"):
+            delete_guest(hotel_id, gid)
+            st.success(t("guest_deleted"))
+            st.rerun()
+
+
 # ---------------------------------------------------------
-# Seiten
+# Pages
 # ---------------------------------------------------------
-def page_dashboard(hotel_id: str):
-    st.header("Dashboard")
+def page_dashboard(hotel_id, t):
+    st.header(t("dashboard"))
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
     rooms = load_rooms(hotel_id)
 
-    st.write(f"Aktuell eingecheckt: {len([g for g in guests if g.status=='checked_in'])}")
-    st.write(f"Ausgecheckt: {len([g for g in guests if g.status=='checked_out'])}")
-    st.write(f"Zimmer gesamt: {len(rooms)}")
+    st.write(f"{t('stats_current_guests')}: {len([g for g in guests if g.status=='checked_in'])}")
+    st.write(f"{t('stats_checked_out')}: {len([g for g in guests if g.status=='checked_out'])}")
+    st.write(f"{t('stats_rooms_total')}: {len(rooms)}")
 
-    render_rooms(hotel_id)
-    render_free_rooms(hotel_id)
+    if st.session_state.get("show_rooms"):
+        st.subheader(t("stats_rooms_occupied"))
+        for r in rooms:
+            if r.occupied:
+                st.write(f"• {t('room')} {r.number} ({r.category})")
 
-def page_new_guest(hotel_id: str):
-    st.header("Neuen Gast anlegen")
+    if st.session_state.get("show_free_rooms"):
+        st.subheader(t("stats_rooms_free"))
+        for r in rooms:
+            if not r.occupied:
+                st.write(f"• {t('room')} {r.number} ({r.category})")
 
-    name = st.text_input("Name")
-    room = st.number_input("Zimmernummer", min_value=1)
-    category = st.selectbox("Kategorie", ["Einzel", "Doppel", "Familie", "Suite"])
-    price = st.number_input("Preis pro Nacht", min_value=0.0)
 
-    if st.button("Speichern"):
+def page_new_guest(hotel_id, t):
+    st.header(t("new_guest_page"))
+
+    name = st.text_input(t("guest_name_label"))
+    room = st.number_input(t("room_number_label"), min_value=1)
+    category = st.selectbox(t("room_category_label"), ["Einzel", "Doppel", "Familie", "Suite"])
+    price = st.number_input(t("price_per_night_label"), min_value=0.0)
+
+    if st.button(t("save_guest")):
         if not name:
-            st.error("Name erforderlich")
+            st.error(t("name_required"))
         else:
             add_guest(hotel_id, name, int(room), category, float(price))
-            st.success("Gast gespeichert")
+            st.success(t("guest_saved"))
             st.rerun()
 
-def page_guest_list(hotel_id: str):
-    st.header("Gästeliste")
+
+def page_guest_list(hotel_id, t):
+    st.header(t("guest_list_page"))
 
     guests = list_all_guests(hotel_id, include_checked_out=False)
 
     if not guests:
-        st.info("Keine Gäste")
+        st.info(t("no_guests"))
         return
 
     for g in guests:
-        render_guest_accordion(hotel_id, g)
+        render_guest_accordion(hotel_id, g, t)
 
-def page_search(hotel_id: str):
-    st.header("Suche")
 
-    q = st.text_input("Name eingeben")
+def page_search(hotel_id, t):
+    st.header(t("search_page"))
+
+    q = st.text_input(t("search_name"))
 
     if q:
         results = search_guests_by_name(hotel_id, q)
         if not results:
-            st.warning("Keine Ergebnisse")
+            st.warning(t("no_results"))
         else:
             for g in results:
-                render_guest_accordion(hotel_id, g)
+                render_guest_accordion(hotel_id, g, t)
 
-def page_rooms(hotel_id: str):
-    st.header("Zimmerverwaltung")
 
-    number = st.number_input("Zimmernummer", min_value=1)
-    category = st.selectbox("Kategorie", ["Einzel", "Doppel", "Familie", "Suite"])
+def page_rooms(hotel_id, t):
+    st.header(t("room_management_page"))
 
-    if st.button("Zimmer speichern"):
+    number = st.number_input(t("room_number"), min_value=1)
+    category = st.selectbox(t("room_category"), ["Einzel", "Doppel", "Familie", "Suite"])
+
+    if st.button(t("save_room")):
         add_room(hotel_id, int(number), category)
-        st.success("Zimmer gespeichert")
+        st.success(t("room_added").format(number=number))
         st.rerun()
 
-    st.subheader("Bestehende Zimmer")
+    st.subheader(t("existing_rooms"))
     rooms = load_rooms(hotel_id)
 
-    for r in rooms:
-        st.write(f"Zimmer {r.number} – {r.category} – {'Belegt' if r.occupied else 'Frei'}")
+    if not rooms:
+        st.info(t("no_rooms_yet"))
+        return
 
-def page_checkout(hotel_id: str):
-    st.header("Ausgecheckte Gäste")
+    for r in rooms:
+        st.write(f"{t('room')} {r.number} – {r.category} – {t('occupied') if r.occupied else t('free')}")
+
+
+def page_checkout(hotel_id, t):
+    st.header(t("checkout_page"))
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
     checked_out = [g for g in guests if g.status == "checked_out"]
 
     if not checked_out:
-        st.info("Keine ausgecheckten Gäste")
+        st.info(t("no_checked_out_guests"))
         return
 
     for g in checked_out:
-        render_guest_accordion(hotel_id, g, editable=False)
+        render_guest_accordion(hotel_id, g, t, editable=False)
+
 
 # ---------------------------------------------------------
-# Hauptfunktion
+# Main
 # ---------------------------------------------------------
 def main():
-    # User prüfen
     if "user" not in st.session_state or not st.session_state["user"]:
         st.write("Bitte zuerst einloggen…")
         st.stop()
@@ -259,18 +287,12 @@ def main():
     user = st.session_state["user"]
     hotel_id = user.get("tenant_id")
 
-    if not hotel_id:
-        st.error("Fehler: Kein Mandant (tenant_id) gefunden.")
-        st.stop()
-
-    # Sprache laden
     lang = st.session_state.get("language", "de")
     texts = load_language(lang)
     t = translator(texts)
 
     st.set_page_config(page_title=t("app_title"), layout="wide")
     load_css()
-
     init_state()
 
     show_header(t)
@@ -278,45 +300,37 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        st.title("Navigation")
+        st.title(t("navigation"))
 
         logout = st.button("Abmelden")
 
         st.markdown("---")
 
         st.session_state["show_rooms"] = st.checkbox(
-            "Besetzte Räume anzeigen",
+            t("stats_rooms_occupied"),
             value=st.session_state.get("show_rooms", False),
         )
 
         st.session_state["show_free_rooms"] = st.checkbox(
-            "Freie Räume anzeigen",
+            t("stats_rooms_free"),
             value=st.session_state.get("show_free_rooms", False),
         )
 
         st.markdown("---")
 
-        pages = [
-            "Dashboard",
-            "Neuen Gast anlegen",
-            "Gästeliste",
-            "Gäste suchen",
-            "Zimmerverwaltung",
-            "Ausgecheckte Gäste",
-        ]
+        pages = {
+            t("dashboard"): "Dashboard",
+            t("new_guest_page"): "Neuen Gast anlegen",
+            t("guest_list_page"): "Gästeliste",
+            t("search_page"): "Suche",
+            t("room_management_page"): "Zimmerverwaltung",
+            t("checkout_page"): "Checkout",
+        }
 
-        current_page = st.session_state.get("page", "Dashboard")
-        if current_page not in pages:
-            current_page = "Dashboard"
-
-        st.session_state["page"] = st.radio(
-            "Seite",
-            pages,
-            index=pages.index(current_page),
-        )
+        selected_label = st.radio(t("select_page"), list(pages.keys()))
+        st.session_state["page"] = pages[selected_label]
 
     if logout:
-        # Nur beim Logout wirklich alles löschen
         lang = st.session_state.get("language", "de")
         st.session_state.clear()
         st.session_state["language"] = lang
@@ -325,17 +339,18 @@ def main():
     page = st.session_state["page"]
 
     if page == "Dashboard":
-        page_dashboard(hotel_id)
+        page_dashboard(hotel_id, t)
     elif page == "Neuen Gast anlegen":
-        page_new_guest(hotel_id)
+        page_new_guest(hotel_id, t)
     elif page == "Gästeliste":
-        page_guest_list(hotel_id)
-    elif page == "Gäste suchen":
-        page_search(hotel_id)
+        page_guest_list(hotel_id, t)
+    elif page == "Suche":
+        page_search(hotel_id, t)
     elif page == "Zimmerverwaltung":
-        page_rooms(hotel_id)
-    elif page == "Ausgecheckte Gäste":
-        page_checkout(hotel_id)
+        page_rooms(hotel_id, t)
+    elif page == "Checkout":
+        page_checkout(hotel_id, t)
+
 
 if __name__ == "__main__":
     main()
