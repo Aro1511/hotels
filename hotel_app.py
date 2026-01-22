@@ -5,25 +5,20 @@ from PIL import Image
 import base64
 
 # ---------------------------------------------------------
-# SESSION-STATE FIX – MUSS GANZ OBEN STEHEN
+# SESSION-STATE SICHER INITIALISIEREN (GANZ OBEN)
 # ---------------------------------------------------------
-if "page" not in st.session_state:
-    st.session_state.page = "Dashboard"
+DEFAULTS = {
+    "page": "Dashboard",
+    "open_guest_id": None,
+    "show_rooms": False,
+    "show_free_rooms": False,
+    "auto_open_guest": None,
+    "guest_form_collapsed": False,
+}
 
-if "open_guest_id" not in st.session_state:
-    st.session_state.open_guest_id = None
-
-if "show_rooms" not in st.session_state:
-    st.session_state.show_rooms = False
-
-if "show_free_rooms" not in st.session_state:
-    st.session_state.show_free_rooms = False
-
-if "auto_open_guest" not in st.session_state:
-    st.session_state.auto_open_guest = None
-
-if "guest_form_collapsed" not in st.session_state:
-    st.session_state.guest_form_collapsed = False
+for key, value in DEFAULTS.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 
 # ---------------------------------------------------------
@@ -42,6 +37,7 @@ if user.get("role") not in ["customer", "superadmin"]:
 
 # WICHTIG: hotel_id = tenant_id → trennt die Daten pro Kunde
 hotel_id = user["tenant_id"]
+
 
 # ---------------------------------------------------------
 # IMPORTS
@@ -96,9 +92,6 @@ def image_to_base64(img):
     return base64.b64encode(buffer.getvalue()).decode()
 
 
-# ---------------------------------------------------------
-# HEADER
-# ---------------------------------------------------------
 def show_header():
     try:
         logo = Image.open("logo.png")
@@ -322,12 +315,12 @@ def main():
 
         st.session_state.show_rooms = st.checkbox(
             "Besetzte Räume anzeigen",
-            value=st.session_state.show_rooms
+            value=st.session_state.get("show_rooms", False)
         )
 
         st.session_state.show_free_rooms = st.checkbox(
             "Freie Räume anzeigen",
-            value=st.session_state.show_free_rooms
+            value=st.session_state.get("show_free_rooms", False)
         )
 
         st.markdown("---")
