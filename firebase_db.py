@@ -24,10 +24,20 @@ def _parse_path(path: str):
     return parts[0], parts[1]
 
 # ---------------------------------------------------------
+# Sicherstellen, dass hotel_id-Dokument existiert
+# ---------------------------------------------------------
+def _ensure_hotel_document(hotel_id: str):
+    doc_ref = db.collection("hotel_app").document(hotel_id)
+    if not doc_ref.get().exists:
+        doc_ref.set({"created": True})
+
+# ---------------------------------------------------------
 # JSON laden
 # ---------------------------------------------------------
 def load_json(path: str):
     hotel_id, subpath = _parse_path(path)
+
+    _ensure_hotel_document(hotel_id)
 
     doc_ref = (
         db.collection("hotel_app")
@@ -43,7 +53,6 @@ def load_json(path: str):
         if isinstance(data, list):
             return data
 
-    # Falls Datei fehlt → leere Liste zurückgeben
     return []
 
 # ---------------------------------------------------------
@@ -51,6 +60,8 @@ def load_json(path: str):
 # ---------------------------------------------------------
 def save_json(path: str, data):
     hotel_id, subpath = _parse_path(path)
+
+    _ensure_hotel_document(hotel_id)
 
     doc_ref = (
         db.collection("hotel_app")
