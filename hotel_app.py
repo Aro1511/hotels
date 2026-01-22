@@ -35,9 +35,13 @@ if user.get("role") not in ["customer", "superadmin"]:
     st.error("Nur Kunden oder Superadmins können diese Seite nutzen.")
     st.stop()
 
+# WICHTIG: Mandant eindeutig bestimmen
 hotel_id = user["tenant_id"]
 
 
+# ---------------------------------------------------------
+# IMPORTS
+# ---------------------------------------------------------
 from logic import (
     add_room,
     add_guest,
@@ -55,6 +59,9 @@ from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf
 
 
+# ---------------------------------------------------------
+# CSS LADEN
+# ---------------------------------------------------------
 def load_css():
     try:
         with open("style.css") as f:
@@ -73,6 +80,9 @@ st.set_page_config(page_title=t("app_title"), layout="wide")
 load_css()
 
 
+# ---------------------------------------------------------
+# LOGO / HEADER
+# ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
@@ -108,10 +118,15 @@ def show_header():
     except:
         st.title(t("header_title"))
 
-
 show_header()
 
+# WICHTIG: Benutzer + Mandant anzeigen
+st.caption(f"Eingeloggt als: {user.get('email')} – Mandant: {hotel_id}")
 
+
+# ---------------------------------------------------------
+# RENDER-FUNKTIONEN
+# ---------------------------------------------------------
 def render_rooms():
     if not st.session_state.show_rooms:
         return
@@ -189,6 +204,9 @@ def render_guest_accordion(guest: Guest, editable=True):
             st.rerun()
 
 
+# ---------------------------------------------------------
+# SEITEN
+# ---------------------------------------------------------
 def page_dashboard():
     st.header("Dashboard")
 
@@ -278,8 +296,10 @@ def page_checkout():
         render_guest_accordion(g, editable=False)
 
 
+# ---------------------------------------------------------
+# HAUPTFUNKTION
+# ---------------------------------------------------------
 def main():
-    # HIER: jedes Mal Session-State initialisieren
     init_state()
 
     with st.sidebar:
