@@ -3,6 +3,13 @@ from users import validate_login, ensure_superadmin_exists
 from utils import load_language, translator
 
 
+def reset_state():
+    """Session-State komplett zurücksetzen, außer Sprache."""
+    lang = st.session_state.get("language", "de")
+    st.session_state.clear()
+    st.session_state["language"] = lang
+
+
 def main():
     # ---------------------------------------------------------
     # Sprache laden
@@ -19,6 +26,10 @@ def main():
     if "user" in st.session_state:
         role = st.session_state["user"]["role"]
 
+        # WICHTIG: Session-State für App sauber initialisieren
+        if "app_initialized" not in st.session_state:
+            st.session_state["app_initialized"] = True
+
         if role == "superadmin":
             import superadmin_app
             superadmin_app.main()
@@ -31,8 +42,7 @@ def main():
     # ---------------------------------------------------------
     # Superadmin prüfen
     # ---------------------------------------------------------
-    if not ensure_superadmin_exists():
-        return
+    ensure_superadmin_exists()
 
     # ---------------------------------------------------------
     # Login-Formular
@@ -49,7 +59,10 @@ def main():
             st.error("Login fehlgeschlagen.")
             return
 
+        # Session-State komplett neu aufbauen
+        reset_state()
         st.session_state["user"] = user
+
         st.success("Login erfolgreich.")
         st.rerun()
 
