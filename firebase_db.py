@@ -2,9 +2,8 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-
 # ---------------------------------------------------------
-# Firestore-Initialisierung über Streamlit Secrets
+# Firestore initialisieren
 # ---------------------------------------------------------
 firebase_secrets = st.secrets["firebase"]
 firebase_creds = dict(firebase_secrets)
@@ -15,17 +14,20 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
+# ---------------------------------------------------------
+# Hilfsfunktion: Pfad validieren
+# ---------------------------------------------------------
+def _parse_path(path: str):
+    parts = path.split("/")
+    if len(parts) != 2:
+        raise ValueError(f"Ungültiger Pfad: {path}. Erwartet: '<hotel_id>/<subpath>'")
+    return parts[0], parts[1]
 
 # ---------------------------------------------------------
-# Firestore-Struktur:
-# hotel_app (Collection)
-#   └── <hotel_id> (Document)
-#         └── <subpath> (Collection: "gaeste" oder "raeume")
-#               └── data (Document)
+# JSON laden
 # ---------------------------------------------------------
-
 def load_json(path: str):
-    hotel_id, subpath = path.split("/")  # z.B. "default_hotel", "gaeste"
+    hotel_id, subpath = _parse_path(path)
 
     doc_ref = (
         db.collection("hotel_app")
@@ -35,15 +37,20 @@ def load_json(path: str):
     )
 
     doc = doc_ref.get()
+
     if doc.exists:
         data = doc.to_dict().get("data")
         if isinstance(data, list):
             return data
+
+    # Falls Datei fehlt → leere Liste zurückgeben
     return []
 
-
+# ---------------------------------------------------------
+# JSON speichern
+# ---------------------------------------------------------
 def save_json(path: str, data):
-    hotel_id, subpath = path.split("/")
+    hotel_id, subpath = _parse_path(path)
 
     doc_ref = (
         db.collection("hotel_app")
