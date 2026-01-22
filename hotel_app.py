@@ -5,7 +5,7 @@ from PIL import Image
 import base64
 
 # ---------------------------------------------------------
-# SESSION-STATE SICHER INITIALISIEREN (GANZ OBEN)
+# SESSION-STATE INITIALISIERUNG ALS FUNKTION
 # ---------------------------------------------------------
 DEFAULTS = {
     "page": "Dashboard",
@@ -16,9 +16,10 @@ DEFAULTS = {
     "guest_form_collapsed": False,
 }
 
-for key, value in DEFAULTS.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+def init_state():
+    for key, value in DEFAULTS.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 # ---------------------------------------------------------
@@ -30,18 +31,13 @@ if "user" not in st.session_state:
 
 user = st.session_state["user"]
 
-# Nur Kunden & Superadmins dürfen ins Hotel-Frontend
 if user.get("role") not in ["customer", "superadmin"]:
     st.error("Nur Kunden oder Superadmins können diese Seite nutzen.")
     st.stop()
 
-# WICHTIG: hotel_id = tenant_id → trennt die Daten pro Kunde
 hotel_id = user["tenant_id"]
 
 
-# ---------------------------------------------------------
-# IMPORTS
-# ---------------------------------------------------------
 from logic import (
     add_room,
     add_guest,
@@ -59,9 +55,6 @@ from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf
 
 
-# ---------------------------------------------------------
-# CSS
-# ---------------------------------------------------------
 def load_css():
     try:
         with open("style.css") as f:
@@ -70,9 +63,6 @@ def load_css():
         pass
 
 
-# ---------------------------------------------------------
-# SPRACHE
-# ---------------------------------------------------------
 if "language" not in st.session_state:
     st.session_state.language = "de"
 
@@ -83,9 +73,6 @@ st.set_page_config(page_title=t("app_title"), layout="wide")
 load_css()
 
 
-# ---------------------------------------------------------
-# LOGO
-# ---------------------------------------------------------
 def image_to_base64(img):
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
@@ -125,9 +112,6 @@ def show_header():
 show_header()
 
 
-# ---------------------------------------------------------
-# RÄUME ANZEIGEN
-# ---------------------------------------------------------
 def render_rooms():
     if not st.session_state.show_rooms:
         return
@@ -160,9 +144,6 @@ def render_free_rooms():
             st.write(f"• Zimmer {r.number} ({r.category})")
 
 
-# ---------------------------------------------------------
-# GASTDETAILS
-# ---------------------------------------------------------
 def render_guest_accordion(guest: Guest, editable=True):
     gid = guest.id
     is_open = st.session_state.open_guest_id == gid
@@ -208,9 +189,6 @@ def render_guest_accordion(guest: Guest, editable=True):
             st.rerun()
 
 
-# ---------------------------------------------------------
-# SEITEN
-# ---------------------------------------------------------
 def page_dashboard():
     st.header("Dashboard")
 
@@ -300,10 +278,10 @@ def page_checkout():
         render_guest_accordion(g, editable=False)
 
 
-# ---------------------------------------------------------
-# NAVIGATION
-# ---------------------------------------------------------
 def main():
+    # HIER: jedes Mal Session-State initialisieren
+    init_state()
+
     with st.sidebar:
         st.title("Navigation")
 
