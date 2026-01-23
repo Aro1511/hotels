@@ -129,7 +129,7 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
                     set_night_paid_status(hotel_id, gid, n.number, True)
                     st.rerun()
 
-    # Neue Nacht hinzufügen (Formular im Expander)
+    # Neue Nacht hinzufügen
     with st.expander(t("add_nights"), expanded=False):
         colA, colB = st.columns([1, 2])
         paid_new = colA.checkbox(t("paid"), key=f"paid_new_{gid}")
@@ -198,17 +198,19 @@ def page_dashboard(hotel_id, t):
     st.write(f"{t('stats_checked_out')}: {len([g for g in guests if g.status=='checked_out'])}")
     st.write(f"{t('stats_rooms_total')}: {len(rooms)}")
 
+    # Belegte Zimmer
     if st.session_state.get("show_rooms"):
-        st.subheader(t("stats_rooms_occupied"))
-        for r in rooms:
-            if r.occupied:
-                st.write(f"• {t('room')} {r.number} ({r.category})")
+        occupied = [r for r in rooms if r.occupied]
+        st.subheader(f"{t('stats_rooms_occupied')}: {len(occupied)}")
+        for r in occupied:
+            st.write(f"• {t('room')} {r.number} ({r.category})")
 
+    # Freie Zimmer
     if st.session_state.get("show_free_rooms"):
-        st.subheader(t("stats_rooms_free"))
-        for r in rooms:
-            if not r.occupied:
-                st.write(f"• {t('room')} {r.number} ({r.category})")
+        free = [r for r in rooms if not r.occupied]
+        st.subheader(f"{t('stats_rooms_free')}: {len(free)}")
+        for r in free:
+            st.write(f"• {t('room')} {r.number} ({r.category})")
 
 
 def page_new_guest(hotel_id, t):
@@ -261,7 +263,7 @@ def page_search(hotel_id, t):
 def page_rooms(hotel_id, t):
     st.header(t("room_management_page"))
 
-    # Neues Zimmer hinzufügen (Formular im Expander)
+    # Neues Zimmer hinzufügen
     with st.expander(t("add_room_section"), expanded=False):
         number = st.number_input(t("room_number"), min_value=1, key="room_number_input")
         category = st.selectbox(t("room_category"), ["Einzel", "Doppel", "Familie", "Suite"], key="room_category_input")
@@ -308,7 +310,7 @@ def page_checkout(hotel_id, t):
 
 
 def page_monthly_report(hotel_id, t):
-    st.header("Monatsabrechnung")
+    st.header(t("monthly_report"))
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
 
@@ -324,8 +326,8 @@ def page_monthly_report(hotel_id, t):
     years = sorted(years)
 
     col1, col2 = st.columns(2)
-    year = col1.selectbox("Jahr", years, index=len(years) - 1)
-    month = col2.selectbox("Monat", list(range(1, 13)), index=now.month - 1)
+    year = col1.selectbox(t("year"), years, index=len(years) - 1)
+    month = col2.selectbox(t("month"), list(range(1, 13)), index=now.month - 1)
 
     filtered = []
     total_paid = 0.0
@@ -345,17 +347,17 @@ def page_monthly_report(hotel_id, t):
             total_unpaid += su
 
     if not filtered:
-        st.info("Keine Daten für diesen Monat.")
+        st.info(t("no_month_data"))
         return
 
-    st.subheader("Details pro Gast")
+    st.subheader(t("monthly_details"))
     for g, cp, cu, sp, su in filtered:
         st.write(f"**{g.name}** – Zimmer {g.room_number}")
         st.write(f"{t('paid_nights')}: {cp}, {t('unpaid_nights')}: {cu}")
         st.write(f"{t('sum_paid')}: {sp} €, {t('sum_unpaid')}: {su} €")
         st.markdown("---")
 
-    st.subheader("Gesamtsumme")
+    st.subheader(t("monthly_total"))
     st.write(f"{t('sum_paid')}: {total_paid} €")
     st.write(f"{t('sum_unpaid')}: {total_unpaid} €")
     st.write(f"Gesamt: {total_paid + total_unpaid} €")
@@ -410,7 +412,7 @@ def main():
             t("search_page"): "Suche",
             t("room_management_page"): "Zimmerverwaltung",
             t("checkout_page"): "Checkout",
-            "Monatsabrechnung": "Monatsabrechnung",
+            t("monthly_report"): "Monatsabrechnung",
         }
 
         selected_label = st.radio(t("select_page"), list(pages.keys()))
