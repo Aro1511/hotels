@@ -2,6 +2,7 @@ import streamlit as st
 import io
 import base64
 from PIL import Image
+from datetime import datetime
 
 from logic import (
     add_room,
@@ -17,6 +18,7 @@ from logic import (
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
 from utils import load_language, translator
+from pdf_generator import generate_receipt_pdf
 
 
 # ---------------------------------------------------------
@@ -106,10 +108,11 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     if guest.checkout_date:
         st.write(f"{t('checkout')}: {guest.checkout_date}")
 
-    # -----------------------------
     # Nächte
-    # -----------------------------
     st.write(f"### {t('guest_details_nights')}")
+
+    if not guest.nights:
+        st.info(t("no_nights"))
 
     for n in guest.nights:
         col1, col2, col3 = st.columns([1, 1, 2])
@@ -126,22 +129,17 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
                     set_night_paid_status(hotel_id, gid, n.number, True)
                     st.rerun()
 
-    # -----------------------------
-    # Neue Nacht hinzufügen
-    # -----------------------------
-    st.write(f"### {t('add_nights')}")
+    # Neue Nacht hinzufügen (Formular nur bei Klick sichtbar)
+    with st.expander(t("add_nights"), expanded=False):
+        colA, colB = st.columns([1, 2])
+        paid_new = colA.checkbox(t("paid"), key=f"paid_new_{gid}")
+        label_btn = t("add_paid_night") if paid_new else t("add_unpaid_night")
+        if colB.button(label_btn, key=f"add_night_{gid}"):
+            add_night_to_guest(hotel_id, gid, paid_new)
+            st.success(t("guest_saved"))
+            st.rerun()
 
-    colA, colB = st.columns([1, 2])
-    paid_new = colA.checkbox(t("paid"), key=f"paid_new_{gid}")
-
-    if colB.button(t("add_paid_night") if paid_new else t("add_unpaid_night"), key=f"add_night_{gid}"):
-        add_night_to_guest(hotel_id, gid, paid_new)
-        st.success(t("guest_saved"))
-        st.rerun()
-
-    # -----------------------------
     # Preisübersicht
-    # -----------------------------
     st.write(f"### {t('summary')}")
 
     count_paid, count_unpaid, sum_paid, sum_unpaid = calculate_nights_summary(guest)
@@ -152,9 +150,17 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     st.write(f"{t('sum_unpaid')}: {sum_unpaid} €")
     st.write(f"**Gesamt: {sum_paid + sum_unpaid} €**")
 
-    # -----------------------------
+    # PDF-Rechnung
+    pdf_bytes = generate_receipt_pdf(guest, count_paid, count_unpaid, sum_paid, sum_unpaid)
+    st.download_button(
+        t("download_receipt_pdf"),
+        data=pdf_bytes,
+        file_name=f"Beleg_{guest.name}.pdf",
+        mime="application/pdf",
+        key=f"pdf_{gid}",
+    )
+
     # Aktionen
-    # -----------------------------
     st.write(f"### {t('guest_actions')}")
 
     if editable and guest.status == "checked_in":
@@ -199,18 +205,19 @@ def page_dashboard(hotel_id, t):
 def page_new_guest(hotel_id, t):
     st.header(t("new_guest_page"))
 
-    name = st.text_input(t("guest_name_label"))
-    room = st.number_input(t("room_number_label"), min_value=1)
-    category = st.selectbox(t("room_category_label"), ["Einzel", "Doppel", "Familie", "Suite"])
-    price = st.number_input(t("price_per_night_label"), min_value=0.0)
+    with st.expander(t("create_new_guest"), expanded=False):
+        name = st.text_input(t("guest_name_label"))
+        room = st.number_input(t("room_number_label"), min_value=1)
+        category = st.selectbox(t("room_category_label"), ["Einzel", "Doppel", "Familie", "Suite"])
+        price = st.number_input(t("price_per_night_label"), min_value=0.0)
 
-    if st.button(t("save_guest")):
-        if not name:
-            st.error(t("name_required"))
-        else:
-            add_guest(hotel_id, name, int(room), category, float(price))
-            st.success(t("guest_saved"))
-            st.rerun()
+        if st.button(t("save_guest")):
+            if not name:
+                st.error(t("name_required"))
+            else:
+                add_guest(hotel_id, name, int(room), category, float(price))
+                st.success(t("guest_saved"))
+                st.rerun()
 
 
 def page_guest_list(hotel_id, t):
@@ -229,7 +236,8 @@ def page_guest_list(hotel_id, t):
 def page_search(hotel_id, t):
     st.header(t("search_page"))
 
-    q = st.text_input(t("search_name"))
+    with st.expander(t("search_page"), expanded=False):
+        q = st.text_input(t("search_name"))
 
     if q:
         results = search_guests_by_name(hotel_id, q)
@@ -243,13 +251,15 @@ def page_search(hotel_id, t):
 def page_rooms(hotel_id, t):
     st.header(t("room_management_page"))
 
-    number = st.number_input(t("room_number"), min_value=1)
-    category = st.selectbox(t("room_category"), ["Einzel", "Doppel", "Familie", "Suite"])
+    # Neues Zimmer hinzufügen (Formular im Expander)
+    with st.expander(t("add_room_section"), expanded=False):
+        number = st.number_input(t("room_number"), min_value=1, key="room_number_input")
+        category = st.selectbox(t("room_category"), ["Einzel", "Doppel", "Familie", "Suite"], key="room_category_input")
 
-    if st.button(t("save_room")):
-        add_room(hotel_id, int(number), category)
-        st.success(t("room_added").format(number=number))
-        st.rerun()
+        if st.button(t("save_room"), key="save_room_btn"):
+            add_room(hotel_id, int(number), category)
+            st.success(t("room_added").format(number=number))
+            st.rerun()
 
     st.subheader(t("existing_rooms"))
     rooms = load_rooms(hotel_id)
@@ -259,7 +269,18 @@ def page_rooms(hotel_id, t):
         return
 
     for r in rooms:
-        st.write(f"{t('room')} {r.number} – {r.category} – {t('occupied') if r.occupied else t('free')}")
+        col1, col2, col3 = st.columns([3, 1, 1])
+        col1.write(f"{t('room')} {r.number} – {r.category} – {t('occupied') if r.occupied else t('free')}")
+
+        if col2.button(t("delete_room"), key=f"del_room_{r.number}"):
+            delete_room(hotel_id, r.number)
+            st.success(t("room_deleted"))
+            st.rerun()
+
+        if r.occupied and col3.button(t("free_room"), key=f"free_room_{r.number}"):
+            set_room_free(hotel_id, r.number)
+            st.success(t("room_freed"))
+            st.rerun()
 
 
 def page_checkout(hotel_id, t):
@@ -274,6 +295,51 @@ def page_checkout(hotel_id, t):
 
     for g in checked_out:
         render_guest_accordion(hotel_id, g, t, editable=False)
+
+
+def page_monthly_report(hotel_id, t):
+    st.header("Monatsabrechnung")
+
+    guests = list_all_guests(hotel_id, include_checked_out=True)
+
+    # Monat / Jahr wählen
+    now = datetime.now()
+    years = sorted({now.year} | {int(g.checkin_date.split("-")[0]) for g in guests if g.checkin_date})
+    year = st.selectbox("Jahr", years, index=len(years) - 1)
+    month = st.selectbox("Monat", list(range(1, 13)), index=now.month - 1)
+
+    filtered = []
+    total_paid = 0.0
+    total_unpaid = 0.0
+
+    for g in guests:
+        if not g.checkin_date:
+            continue
+        try:
+            d = datetime.strptime(g.checkin_date, "%Y-%m-%d")
+        except ValueError:
+            continue
+        if d.year == year and d.month == month:
+            cp, cu, sp, su = calculate_nights_summary(g)
+            filtered.append((g, cp, cu, sp, su))
+            total_paid += sp
+            total_unpaid += su
+
+    if not filtered:
+        st.info("Keine Daten für diesen Monat.")
+        return
+
+    st.subheader("Details pro Gast")
+    for g, cp, cu, sp, su in filtered:
+        st.write(f"**{g.name}** – Zimmer {g.room_number}")
+        st.write(f"{t('paid_nights')}: {cp}, {t('unpaid_nights')}: {cu}")
+        st.write(f"{t('sum_paid')}: {sp} €, {t('sum_unpaid')}: {su} €")
+        st.markdown("---")
+
+    st.subheader("Gesamtsumme")
+    st.write(f"{t('sum_paid')}: {total_paid} €")
+    st.write(f"{t('sum_unpaid')}: {total_unpaid} €")
+    st.write(f"Gesamt: {total_paid + total_unpaid} €")
 
 
 # ---------------------------------------------------------
@@ -325,6 +391,7 @@ def main():
             t("search_page"): "Suche",
             t("room_management_page"): "Zimmerverwaltung",
             t("checkout_page"): "Checkout",
+            "Monatsabrechnung": "Monatsabrechnung",
         }
 
         selected_label = st.radio(t("select_page"), list(pages.keys()))
@@ -350,6 +417,8 @@ def main():
         page_rooms(hotel_id, t)
     elif page == "Checkout":
         page_checkout(hotel_id, t)
+    elif page == "Monatsabrechnung":
+        page_monthly_report(hotel_id, t)
 
 
 if __name__ == "__main__":
