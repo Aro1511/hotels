@@ -101,5 +101,14 @@
   "stats_revenue": "Revenue (paid)",
   "stats_unpaid": "Outstanding balance",
   "chart_revenue_title": "Revenue per guest",
-  "chart_occupancy_title": "Room occupancy"
+  "chart_occupancy_title": "Room occupancy",
+
+  "change_password": "Change password",
+"old_password": "Old password",
+"new_password": "New password",
+"repeat_password": "Repeat new password",
+"save_new_password": "Save new password",
+"passwords_not_match": "The new passwords do not match.",
+"password_changed": "Password changed successfully."
+
 }

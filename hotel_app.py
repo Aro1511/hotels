@@ -19,6 +19,7 @@ from database import load_rooms, delete_room, set_room_free
 from models import Guest
 from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf, generate_receipt_csv
+from users import change_password
 
 
 # ---------------------------------------------------------
@@ -363,6 +364,28 @@ def page_monthly_report(hotel_id, t):
     st.write(f"Gesamt: {total_paid + total_unpaid} €")
 
 
+def page_change_password(hotel_id, t):
+    st.header(t("change_password"))
+
+    with st.expander(t("change_password"), expanded=False):
+        old_pw = st.text_input(t("old_password"), type="password")
+        new_pw = st.text_input(t("new_password"), type="password")
+        new_pw2 = st.text_input(t("repeat_password"), type="password")
+
+        if st.button(t("save_new_password")):
+            if new_pw != new_pw2:
+                st.error(t("passwords_not_match"))
+                return
+
+            user_id = st.session_state["user"]["id"]
+            ok, msg = change_password(user_id, old_pw, new_pw)
+
+            if ok:
+                st.success(t("password_changed"))
+            else:
+                st.error(msg)
+
+
 # ---------------------------------------------------------
 # Main
 # ---------------------------------------------------------
@@ -413,6 +436,7 @@ def main():
             t("room_management_page"): "Zimmerverwaltung",
             t("checkout_page"): "Checkout",
             t("monthly_report"): "Monatsabrechnung",
+            t("change_password"): "Passwort ändern",
         }
 
         selected_label = st.radio(t("select_page"), list(pages.keys()))
@@ -440,6 +464,8 @@ def main():
         page_checkout(hotel_id, t)
     elif page == "Monatsabrechnung":
         page_monthly_report(hotel_id, t)
+    elif page == "Passwort ändern":
+        page_change_password(hotel_id, t)
 
 
 if __name__ == "__main__":

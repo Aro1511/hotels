@@ -100,3 +100,26 @@ def validate_login(email, password):
             return user
 
     return None
+
+
+# ---------------------------------------------------------
+# Passwort ändern (für eingeloggte Mandanten)
+# ---------------------------------------------------------
+def change_password(user_id, old_password, new_password):
+    user_ref = db.collection("users").document(user_id)
+    snap = user_ref.get()
+    if not snap.exists:
+        return False, "User existiert nicht."
+
+    user = snap.to_dict()
+
+    if "password" not in user:
+        return False, "Kein Passwort gesetzt."
+
+    if not verify_password(old_password, user["password"]):
+        return False, "Das alte Passwort ist falsch."
+
+    new_hash = hash_password(new_password)
+    user_ref.update({"password": new_hash})
+
+    return True, "Passwort erfolgreich geändert."

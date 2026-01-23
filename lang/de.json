@@ -101,5 +101,14 @@
   "stats_revenue": "Einnahmen (bezahlt)",
   "stats_unpaid": "Offene Beträge",
   "chart_revenue_title": "Einnahmen pro Gast",
-  "chart_occupancy_title": "Zimmerbelegung"
+  "chart_occupancy_title": "Zimmerbelegung",
+  
+  "change_password": "Passwort ändern",
+"old_password": "Altes Passwort",
+"new_password": "Neues Passwort",
+"repeat_password": "Neues Passwort wiederholen",
+"save_new_password": "Neues Passwort speichern",
+"passwords_not_match": "Die neuen Passwörter stimmen nicht überein.",
+"password_changed": "Passwort erfolgreich geändert."
+
 }
