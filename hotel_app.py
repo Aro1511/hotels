@@ -18,7 +18,7 @@ from logic import (
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
 from utils import load_language, translator
-from pdf_generator import generate_receipt_pdf
+from pdf_generator import generate_receipt_pdf, generate_receipt_csv
 
 
 # ---------------------------------------------------------
@@ -129,7 +129,7 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
                     set_night_paid_status(hotel_id, gid, n.number, True)
                     st.rerun()
 
-    # Neue Nacht hinzufügen (Formular nur bei Klick sichtbar)
+    # Neue Nacht hinzufügen (Formular im Expander)
     with st.expander(t("add_nights"), expanded=False):
         colA, colB = st.columns([1, 2])
         paid_new = colA.checkbox(t("paid"), key=f"paid_new_{gid}")
@@ -150,14 +150,23 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     st.write(f"{t('sum_unpaid')}: {sum_unpaid} €")
     st.write(f"**Gesamt: {sum_paid + sum_unpaid} €**")
 
-    # PDF-Rechnung
-    pdf_bytes = generate_receipt_pdf(guest, count_paid, count_unpaid, sum_paid, sum_unpaid)
+    # PDF & CSV
+    pdf_bytes = generate_receipt_pdf(guest, t)
     st.download_button(
         t("download_receipt_pdf"),
         data=pdf_bytes,
         file_name=f"Beleg_{guest.name}.pdf",
         mime="application/pdf",
         key=f"pdf_{gid}",
+    )
+
+    csv_bytes = generate_receipt_csv(guest, t)
+    st.download_button(
+        t("download_receipt_csv"),
+        data=csv_bytes,
+        file_name=f"Beleg_{guest.name}.csv",
+        mime="text/csv",
+        key=f"csv_{gid}",
     )
 
     # Aktionen
@@ -236,6 +245,7 @@ def page_guest_list(hotel_id, t):
 def page_search(hotel_id, t):
     st.header(t("search_page"))
 
+    q = ""
     with st.expander(t("search_page"), expanded=False):
         q = st.text_input(t("search_name"))
 
@@ -302,11 +312,20 @@ def page_monthly_report(hotel_id, t):
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
 
-    # Monat / Jahr wählen
     now = datetime.now()
-    years = sorted({now.year} | {int(g.checkin_date.split("-")[0]) for g in guests if g.checkin_date})
-    year = st.selectbox("Jahr", years, index=len(years) - 1)
-    month = st.selectbox("Monat", list(range(1, 13)), index=now.month - 1)
+    years = {now.year}
+    for g in guests:
+        if g.checkin_date:
+            try:
+                d = datetime.strptime(g.checkin_date, "%Y-%m-%d")
+                years.add(d.year)
+            except ValueError:
+                pass
+    years = sorted(years)
+
+    col1, col2 = st.columns(2)
+    year = col1.selectbox("Jahr", years, index=len(years) - 1)
+    month = col2.selectbox("Monat", list(range(1, 13)), index=now.month - 1)
 
     filtered = []
     total_paid = 0.0
