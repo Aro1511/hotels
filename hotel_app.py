@@ -107,8 +107,6 @@ def show_header(t):
         )
     except:
         st.title(t("header_title"))
-
-
 # ---------------------------------------------------------
 # Guest Accordion
 # ---------------------------------------------------------
@@ -208,6 +206,8 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
             delete_guest(hotel_id, gid)
             st.success(t("guest_deleted"))
             st.rerun()
+
+
 # ---------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------
@@ -303,7 +303,8 @@ def page_dashboard(hotel_id, t):
             })
         st.table(rows)
 
-    st.markmarkdown("---")
+    # ⭐ KORREKTUR HIER:
+    st.markdown("---")
 
     st.subheader(t("dashboard_open_balances_title"))
     if not open_balances:
@@ -318,8 +319,6 @@ def page_dashboard(hotel_id, t):
                 t("sum_unpaid"): f"{su} {symbol}",
             })
         st.table(rows)
-
-
 # ---------------------------------------------------------
 # Neue Gäste anlegen
 # ---------------------------------------------------------
@@ -664,6 +663,8 @@ def render_sidebar(t, user):
         st.session_state["page"] = pages[selected_label_page]
 
         return logout
+
+
 # ---------------------------------------------------------
 # Passwort ändern
 # ---------------------------------------------------------
