@@ -131,7 +131,6 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     if guest.checkout_date:
         st.write(f"{t('checkout')}: {guest.checkout_date}")
 
-    # Nächte
     st.write(f"### {t('guest_details_nights')}")
 
     if not guest.nights:
@@ -152,7 +151,6 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
                     set_night_paid_status(hotel_id, gid, n.number, True)
                     st.rerun()
 
-    # Neue Nacht hinzufügen
     with st.expander(t("add_nights"), expanded=False):
         colA, colB = st.columns([1, 2])
         paid_new = colA.checkbox(t("paid"), key=f"paid_new_{gid}")
@@ -162,7 +160,6 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
             st.success(t("guest_saved"))
             st.rerun()
 
-    # Preisübersicht
     st.write(f"### {t('summary')}")
 
     count_paid, count_unpaid, sum_paid, sum_unpaid = calculate_nights_summary(guest)
@@ -173,7 +170,6 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     st.write(f"{t('sum_unpaid')}: {sum_unpaid} {symbol}")
     st.write(f"**{t('total')}: {sum_paid + sum_unpaid} {symbol}**")
 
-    # PDF & CSV
     pdf_bytes = generate_receipt_pdf(guest, t)
     st.download_button(
         t("download_receipt_pdf"),
@@ -192,7 +188,6 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
         key=f"csv_{gid}",
     )
 
-    # Aktionen
     st.write(f"### {t('guest_actions')}")
 
     if editable and guest.status == "checked_in":
@@ -209,33 +204,121 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
 
 
 # ---------------------------------------------------------
-# Pages
+# Dashboard (barrierefrei, ohne Diagramme)
 # ---------------------------------------------------------
 def page_dashboard(hotel_id, t):
     st.header(t("dashboard"))
 
+    symbol = get_currency_symbol()
     guests = list_all_guests(hotel_id, include_checked_out=True)
     rooms = load_rooms(hotel_id)
 
-    st.write(f"{t('stats_current_guests')}: {len([g for g in guests if g.status=='checked_in'])}")
-    st.write(f"{t('stats_checked_out')}: {len([g for g in guests if g.status=='checked_out'])}")
+    current_guests = [g for g in guests if g.status == "checked_in"]
+    checked_out_guests = [g for g in guests if g.status == "checked_out"]
+    occupied_rooms = [r for r in rooms if r.occupied]
+    free_rooms = [r for r in rooms if not r.occupied]
+
+    now = datetime.now()
+    current_year = now.year
+    current_month = now.month
+
+    revenue_this_month = 0.0
+    unpaid_nights_this_month = 0
+    unpaid_sum_this_month = 0.0
+
+    monthly_stats = {}  # (year, month) -> [paid_nights, revenue, unpaid_nights]
+
+    room_nights = {}  # room_number -> total nights
+    open_balances = []  # (guest, unpaid_nights, unpaid_sum)
+
+    for g in guests:
+        cp, cu, sp, su = calculate_nights_summary(g)
+
+        if g.room_number is not None:
+            room_nights[g.room_number] = room_nights.get(g.room_number, 0) + (cp + cu)
+
+        if cu > 0 and su > 0:
+            open_balances.append((g, cu, su))
+
+        if g.checkin_date:
+            try:
+                d = datetime.strptime(g.checkin_date, "%Y-%m-%d")
+            except ValueError:
+                continue
+
+            key = (d.year, d.month)
+            if key not in monthly_stats:
+                monthly_stats[key] = [0, 0.0, 0]
+            monthly_stats[key][0] += cp
+            monthly_stats[key][1] += sp
+            monthly_stats[key][2] += cu
+
+            if d.year == current_year and d.month == current_month:
+                revenue_this_month += sp
+                unpaid_nights_this_month += cu
+                unpaid_sum_this_month += su
+
+    st.subheader(t("dashboard_summary_title"))
+    st.write(f"{t('stats_current_guests')}: {len(current_guests)}")
+    st.write(f"{t('stats_checked_out')}: {len(checked_out_guests)}")
     st.write(f"{t('stats_rooms_total')}: {len(rooms)}")
+    st.write(f"{t('stats_rooms_occupied')}: {len(occupied_rooms)}")
+    st.write(f"{t('stats_rooms_free')}: {len(free_rooms)}")
+    st.write(f"{t('dashboard_revenue_this_month')}: {revenue_this_month} {symbol}")
+    st.write(f"{t('dashboard_unpaid_nights_this_month')}: {unpaid_nights_this_month} ({unpaid_sum_this_month} {symbol})")
 
-    # Belegte Zimmer
-    if st.session_state.get("show_rooms"):
-        occupied = [r for r in rooms if r.occupied]
-        st.subheader(f"{t('stats_rooms_occupied')}: {len(occupied)}")
-        for r in occupied:
-            st.write(f"• {t('room')} {r.number} ({r.category})")
+    st.markdown("---")
 
-    # Freie Zimmer
-    if st.session_state.get("show_free_rooms"):
-        free = [r for r in rooms if not r.occupied]
-        st.subheader(f"{t('stats_rooms_free')}: {len(free)}")
-        for r in free:
-            st.write(f"• {t('room')} {r.number} ({r.category})")
+    st.subheader(t("dashboard_monthly_overview_title"))
+    if not monthly_stats:
+        st.info(t("dashboard_no_monthly_data"))
+    else:
+        rows = []
+        for (y, m), (paid_n, rev, unpaid_n) in sorted(monthly_stats.items()):
+            rows.append({
+                t("dashboard_table_year"): y,
+                t("dashboard_table_month"): m,
+                t("dashboard_table_paid_nights"): paid_n,
+                t("dashboard_table_revenue"): f"{rev} {symbol}",
+                t("dashboard_table_unpaid_nights"): unpaid_n,
+            })
+        st.table(rows)
+
+    st.markdown("---")
+
+    st.subheader(t("dashboard_top_rooms_title"))
+    if not room_nights:
+        st.info(t("dashboard_no_top_rooms"))
+    else:
+        sorted_rooms = sorted(room_nights.items(), key=lambda x: x[1], reverse=True)[:10]
+        rows = []
+        for room_number, nights in sorted_rooms:
+            rows.append({
+                t("room"): room_number,
+                t("dashboard_room_nights"): nights,
+            })
+        st.table(rows)
+
+    st.markdown("---")
+
+    st.subheader(t("dashboard_open_balances_title"))
+    if not open_balances:
+        st.info(t("dashboard_no_open_balances"))
+    else:
+        rows = []
+        for g, cu, su in open_balances:
+            rows.append({
+                t("guest_name_label"): g.name,
+                t("room_number_label"): g.room_number,
+                t("unpaid_nights"): cu,
+                t("sum_unpaid"): f"{su} {symbol}",
+            })
+        st.table(rows)
 
 
+# ---------------------------------------------------------
+# Weitere Seiten
+# ---------------------------------------------------------
 def page_new_guest(hotel_id, t):
     st.header(t("new_guest_page"))
 
@@ -251,7 +334,6 @@ def page_new_guest(hotel_id, t):
         ]
         category = st.selectbox(t("room_category_label"), category_options)
 
-        symbol = get_currency_symbol()
         price = st.number_input(t("price_per_night_label"), min_value=0.0)
 
         if st.button(t("save_guest")):
@@ -295,7 +377,6 @@ def page_search(hotel_id, t):
 def page_rooms(hotel_id, t):
     st.header(t("room_management_page"))
 
-    # Neues Zimmer hinzufügen
     with st.expander(t("add_room_section"), expanded=False):
         number = st.number_input(t("room_number"), min_value=1, key="room_number_input")
 
@@ -436,12 +517,10 @@ def main():
     user = st.session_state["user"]
     hotel_id = user.get("tenant_id")
 
-    # Sprache laden
     lang = st.session_state.get("language", "de")
     texts = load_language(lang)
     t = translator(texts)
 
-    # Währung aus User-Dokument laden (falls vorhanden)
     if "currency" not in st.session_state:
         user_currency = user.get("currency", "USD")
         st.session_state["currency"] = user_currency
@@ -453,7 +532,6 @@ def main():
     show_header(t)
     st.caption(f"Eingeloggt als: {user.get('email')} – Mandant: {hotel_id}")
 
-    # Sidebar
     with st.sidebar:
         st.title(t("navigation"))
 
@@ -473,7 +551,6 @@ def main():
 
         st.markdown("---")
 
-        # Währungsauswahl (mit Firestore-Speicherung)
         currency_options = {
             "USD": t("currency_usd"),
             "EUR": t("currency_eur"),
@@ -497,7 +574,6 @@ def main():
 
         if new_code != current_code:
             st.session_state["currency"] = new_code
-            # In Firestore speichern
             try:
                 db.collection("users").document(user["id"]).update({"currency": new_code})
                 st.session_state["user"]["currency"] = new_code
