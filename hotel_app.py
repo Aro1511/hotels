@@ -631,38 +631,39 @@ def render_sidebar(t, user):
                 pass
 
         st.markdown("---")
+        
+# Seiten (OHNE „Gast bearbeiten“)
+pages = {
+    t("dashboard"): "Dashboard",
+    t("new_guest_page"): "Neuen Gast anlegen",
+    t("guest_list_page"): "Gästeliste",
+    t("search_page"): "Suche",
+    t("room_management_page"): "Zimmerverwaltung",
+    t("checkout_page"): "Checkout",
+    t("monthly_report"): "Monatsabrechnung",
+    t("change_password"): "Passwort ändern",
+}
 
-        # Seiten (OHNE „Gast bearbeiten“)
-        pages = {
-            t("dashboard"): "Dashboard",
-            t("new_guest_page"): "Neuen Gast anlegen",
-            t("guest_list_page"): "Gästeliste",
-            t("search_page"): "Suche",
-            t("room_management_page"): "Zimmerverwaltung",
-            t("checkout_page"): "Checkout",
-            t("monthly_report"): "Monatsabrechnung",
-            t("change_password"): "Passwort ändern",
-        }
+labels = list(pages.keys())
+values = list(pages.values())
 
-        labels = list(pages.keys())
-        values = list(pages.values())
+# aktuelle Seite aus Session State
+current_page = st.session_state.get("page", "Dashboard")
 
-        # aktuelle Seite aus Session State
-        current_page = st.session_state.get("page", "Dashboard")
+# passenden Index finden
+try:
+    current_index = values.index(current_page)
+except ValueError:
+    current_index = 0
 
-        # passenden Index finden
-        try:
-            current_index = values.index(current_page)
-        except ValueError:
-            current_index = 0
+selected_label_page = st.radio(
+    t("select_page"),
+    labels,
+    index=current_index
+)
 
-        selected_label_page = st.radio(
-            t("select_page"),
-            labels,
-            index=current_index
-        )
+st.session_state["page"] = pages[selected_label_page]
 
-        st.session_state["page"] = pages[selected_label_page]
 
         return logout
 # ---------------------------------------------------------
