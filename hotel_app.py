@@ -209,7 +209,7 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
             st.success(t("guest_deleted"))
             st.rerun()
 # ---------------------------------------------------------
-# Dashboard (barrierefrei)
+# Dashboard
 # ---------------------------------------------------------
 def page_dashboard(hotel_id, t):
     st.header(t("dashboard"))
@@ -303,7 +303,7 @@ def page_dashboard(hotel_id, t):
             })
         st.table(rows)
 
-    st.markdown("---")
+    st.markmarkdown("---")
 
     st.subheader(t("dashboard_open_balances_title"))
     if not open_balances:
@@ -502,7 +502,7 @@ def page_monthly_report(hotel_id, t):
     st.write(f"{t('sum_unpaid')}: {total_unpaid} {symbol}")
     st.write(f"{t('total')}: {total_paid + total_unpaid} {symbol}")
 # ---------------------------------------------------------
-# Gast bearbeiten (Edit Guest)
+# Gast bearbeiten
 # ---------------------------------------------------------
 def page_edit_guest(hotel_id, t):
     gid = st.session_state.get("edit_guest_id")
@@ -567,7 +567,6 @@ def page_edit_guest(hotel_id, t):
             )
             st.success(t("guest_updated"))
 
-            # Reset
             st.session_state["edit_guest_id"] = None
             st.session_state["page"] = "Gästeliste"
             st.rerun()
@@ -631,41 +630,63 @@ def render_sidebar(t, user):
                 pass
 
         st.markdown("---")
-        
-# Seiten (OHNE „Gast bearbeiten“)
-pages = {
-    t("dashboard"): "Dashboard",
-    t("new_guest_page"): "Neuen Gast anlegen",
-    t("guest_list_page"): "Gästeliste",
-    t("search_page"): "Suche",
-    t("room_management_page"): "Zimmerverwaltung",
-    t("checkout_page"): "Checkout",
-    t("monthly_report"): "Monatsabrechnung",
-    t("change_password"): "Passwort ändern",
-}
 
-labels = list(pages.keys())
-values = list(pages.values())
+        # Seiten (OHNE „Gast bearbeiten“)
+        pages = {
+            t("dashboard"): "Dashboard",
+            t("new_guest_page"): "Neuen Gast anlegen",
+            t("guest_list_page"): "Gästeliste",
+            t("search_page"): "Suche",
+            t("room_management_page"): "Zimmerverwaltung",
+            t("checkout_page"): "Checkout",
+            t("monthly_report"): "Monatsabrechnung",
+            t("change_password"): "Passwort ändern",
+        }
 
-# aktuelle Seite aus Session State
-current_page = st.session_state.get("page", "Dashboard")
+        labels = list(pages.keys())
+        values = list(pages.values())
 
-# passenden Index finden
-try:
-    current_index = values.index(current_page)
-except ValueError:
-    current_index = 0
+        # aktuelle Seite aus Session State
+        current_page = st.session_state.get("page", "Dashboard")
 
-selected_label_page = st.radio(
-    t("select_page"),
-    labels,
-    index=current_index
-)
+        # passenden Index finden
+        try:
+            current_index = values.index(current_page)
+        except ValueError:
+            current_index = 0
 
-st.session_state["page"] = pages[selected_label_page]
+        selected_label_page = st.radio(
+            t("select_page"),
+            labels,
+            index=current_index
+        )
 
+        st.session_state["page"] = pages[selected_label_page]
 
         return logout
+# ---------------------------------------------------------
+# Passwort ändern
+# ---------------------------------------------------------
+def page_change_password(hotel_id, t):
+    st.header(t("change_password"))
+
+    with st.expander(t("change_password"), expanded=False):
+        old_pw = st.text_input(t("old_password"), type="password")
+        new_pw = st.text_input(t("new_password"), type="password")
+        new_pw2 = st.text_input(t("confirm_password"), type="password")
+
+        if st.button(t("save_password")):
+            if new_pw != new_pw2:
+                st.error(t("passwords_not_match"))
+                return
+
+            try:
+                change_password(st.session_state["user"]["email"], old_pw, new_pw)
+                st.success(t("password_changed"))
+            except Exception as e:
+                st.error(str(e))
+
+
 # ---------------------------------------------------------
 # Routing + MAIN
 # ---------------------------------------------------------
