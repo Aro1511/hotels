@@ -14,6 +14,7 @@ from logic import (
     list_all_guests,
     checkout_guest,
     delete_guest,
+    update_guest_details,
 )
 from database import load_rooms, delete_room, set_room_free
 from models import Guest
@@ -32,6 +33,7 @@ DEFAULTS = {
     "show_rooms": False,
     "show_free_rooms": False,
     "currency": "USD",  # Standard: USD
+    "edit_guest_id": None,
 }
 
 def init_state():
@@ -191,9 +193,15 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     st.write(f"### {t('guest_actions')}")
 
     if editable and guest.status == "checked_in":
-        if st.button(t("checkout_guest"), key=f"checkout_{gid}"):
+        colA, colB = st.columns(2)
+        if colA.button(t("checkout_guest"), key=f"checkout_{gid}"):
             checkout_guest(hotel_id, gid)
             st.success(t("guest_checked_out"))
+            st.rerun()
+
+        if colB.button(t("edit_guest"), key=f"edit_{gid}"):
+            st.session_state["edit_guest_id"] = gid
+            st.session_state["page"] = "Gast bearbeiten"
             st.rerun()
 
     if guest.status == "checked_out":
@@ -227,8 +235,7 @@ def page_dashboard(hotel_id, t):
     unpaid_sum_this_month = 0.0
 
     monthly_stats = {}  # (year, month) -> [paid_nights, revenue, unpaid_nights]
-
-    room_nights = {}  # room_number -> total nights
+    room_nights = {}    # room_number -> total nights
     open_balances = []  # (guest, unpaid_nights, unpaid_sum)
 
     for g in guests:
@@ -506,6 +513,71 @@ def page_change_password(hotel_id, t):
                 st.error(msg)
 
 
+def page_edit_guest(hotel_id, t):
+    gid = st.session_state.get("edit_guest_id")
+    if not gid:
+        st.error("Kein Gast ausgewählt.")
+        return
+
+    guests = list_all_guests(hotel_id, include_checked_out=True)
+    guest = next((g for g in guests if g.id == gid), None)
+
+    if not guest:
+        st.error("Gast nicht gefunden.")
+        return
+
+    st.header(t("edit_guest"))
+
+    room_number = st.number_input(
+        t("room_number_label"),
+        min_value=1,
+        value=guest.room_number,
+        key=f"edit_room_{gid}"
+    )
+
+    category_options = [
+        t("room_cat_single"),
+        t("room_cat_double"),
+        t("room_cat_family"),
+        t("room_cat_suite"),
+    ]
+
+    try:
+        idx = category_options.index(guest.room_category)
+    except ValueError:
+        idx = 0
+
+    room_category = st.selectbox(
+        t("room_category_label"),
+        category_options,
+        index=idx,
+        key=f"edit_cat_{gid}"
+    )
+
+    price = st.number_input(
+        t("price_per_night_label"),
+        min_value=0.0,
+        value=float(guest.price_per_night),
+        key=f"edit_price_{gid}"
+    )
+
+    if st.button(t("save_changes"), key=f"save_changes_{gid}"):
+        try:
+            update_guest_details(
+                hotel_id,
+                guest_id=gid,
+                new_room_number=int(room_number),
+                new_room_category=room_category,
+                new_price=float(price),
+            )
+            st.success(t("guest_updated"))
+            st.session_state["edit_guest_id"] = None
+            st.session_state["page"] = "Gästeliste"
+            st.rerun()
+        except ValueError as e:
+            st.error(str(e))
+
+
 # ---------------------------------------------------------
 # Main
 # ---------------------------------------------------------
@@ -591,6 +663,7 @@ def main():
             t("checkout_page"): "Checkout",
             t("monthly_report"): "Monatsabrechnung",
             t("change_password"): "Passwort ändern",
+            t("edit_guest"): "Gast bearbeiten",
         }
 
         selected_label_page = st.radio(t("select_page"), list(pages.keys()))
@@ -620,6 +693,8 @@ def main():
         page_monthly_report(hotel_id, t)
     elif page == "Passwort ändern":
         page_change_password(hotel_id, t)
+    elif page == "Gast bearbeiten":
+        page_edit_guest(hotel_id, t)
 
 
 if __name__ == "__main__":

@@ -111,6 +111,67 @@ def update_guest(hotel_id: str, updated_guest: Guest) -> None:
     save_guests(hotel_id, guests)
 
 
+# ---------------------------------------------------------
+# NEU: Gast bearbeiten (Zimmer, Kategorie, Preis)
+# ---------------------------------------------------------
+def update_guest_details(
+    hotel_id: str,
+    guest_id: int,
+    new_room_number: int,
+    new_room_category: str,
+    new_price: float
+) -> Guest:
+
+    guests = load_guests(hotel_id)
+    rooms = load_rooms(hotel_id)
+
+    guest = get_guest_by_id(hotel_id, guest_id)
+    if not guest:
+        raise ValueError("Gast nicht gefunden")
+
+    old_room_number = guest.room_number
+
+    # Wenn Zimmer gewechselt wird
+    if new_room_number != old_room_number:
+
+        # Altes Zimmer freigeben
+        for r in rooms:
+            if r.number == old_room_number:
+                r.occupied = False
+                break
+
+        # Neues Zimmer prüfen
+        new_room = get_room(hotel_id, new_room_number)
+
+        # Neues Zimmer existiert nicht → automatisch anlegen
+        if new_room is None:
+            new_room = Room(number=new_room_number, category=new_room_category, occupied=False)
+            rooms.append(new_room)
+
+        # Neues Zimmer darf nicht belegt sein
+        if new_room.occupied:
+            raise ValueError(f"Zimmer {new_room_number} ist bereits belegt.")
+
+        # Neues Zimmer belegen
+        new_room.occupied = True
+
+        # Gast aktualisieren
+        guest.room_number = new_room_number
+
+    # Kategorie & Preis aktualisieren
+    guest.room_category = new_room_category
+    guest.price_per_night = new_price
+
+    # Speichern
+    update_guest(hotel_id, guest)
+    save_rooms(hotel_id, rooms)
+
+    return guest
+
+
+# ---------------------------------------------------------
+# Nächte
+# ---------------------------------------------------------
 def add_night_to_guest(hotel_id: str, guest_id: int, paid: bool) -> Guest:
     guests = load_guests(hotel_id)
     for g in guests:
@@ -155,6 +216,9 @@ def calculate_nights_summary(guest: Guest) -> Tuple[int, int, float, float]:
     return count_paid, count_unpaid, sum_paid, sum_unpaid
 
 
+# ---------------------------------------------------------
+# Suche & Listen
+# ---------------------------------------------------------
 def search_guests_by_name(hotel_id: str, query: str) -> List[Guest]:
     guests = load_guests(hotel_id)
     query_lower = query.lower()
@@ -168,6 +232,9 @@ def list_all_guests(hotel_id: str, include_checked_out: bool = False) -> List[Gu
     return [g for g in guests if g.status == "checked_in"]
 
 
+# ---------------------------------------------------------
+# Checkout & Löschen
+# ---------------------------------------------------------
 def checkout_guest(hotel_id: str, guest_id: int) -> None:
     guests = load_guests(hotel_id)
     rooms = load_rooms(hotel_id)

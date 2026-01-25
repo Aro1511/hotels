@@ -12,6 +12,7 @@
   "checkout_page": "Checkout",
   "monthly_report": "Monatsabrechnung",
   "change_password": "Passwort ändern",
+  "edit_guest": "Gast bearbeiten",
 
   "logout": "Abmelden",
 
@@ -132,5 +133,8 @@
   "currency_etb": "Äthiopischer Birr",
   "currency_sar": "Saudi-Riyal",
   "currency_gbp": "Britisches Pfund",
-  "currency_cad": "Kanadischer Dollar"
+  "currency_cad": "Kanadischer Dollar",
+
+  "save_changes": "Änderungen speichern",
+  "guest_updated": "Gast wurde aktualisiert."
 }
