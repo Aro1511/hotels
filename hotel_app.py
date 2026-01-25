@@ -20,6 +20,7 @@ from models import Guest
 from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf, generate_receipt_csv
 from users import change_password
+from firebase_db import db
 
 
 # ---------------------------------------------------------
@@ -30,12 +31,32 @@ DEFAULTS = {
     "open_guest_id": None,
     "show_rooms": False,
     "show_free_rooms": False,
+    "currency": "USD",  # Standard: USD
 }
 
 def init_state():
     for key, value in DEFAULTS.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+# ---------------------------------------------------------
+# Helpers für Währung
+# ---------------------------------------------------------
+def get_currency_code():
+    return st.session_state.get("currency", "USD")
+
+
+def get_currency_symbol():
+    code = get_currency_code()
+    return {
+        "EUR": "€",
+        "USD": "$",
+        "ETB": "Br",
+        "SAR": "﷼",
+        "GBP": "£",
+        "CAD": "$",
+    }.get(code, "$")
 
 
 # ---------------------------------------------------------
@@ -93,6 +114,7 @@ def show_header(t):
 def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
     gid = guest.id
     is_open = st.session_state.get("open_guest_id") == gid
+    symbol = get_currency_symbol()
 
     label = ("▾ " if is_open else "▸ ") + guest.name
 
@@ -104,7 +126,7 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
         return
 
     st.write(f"{t('guest_details_room')}: {guest.room_number} ({guest.room_category})")
-    st.write(f"{t('guest_details_price')}: {guest.price_per_night} €")
+    st.write(f"{t('guest_details_price')}: {guest.price_per_night} {symbol}")
     st.write(f"{t('checkin')}: {guest.checkin_date}")
     if guest.checkout_date:
         st.write(f"{t('checkout')}: {guest.checkout_date}")
@@ -147,9 +169,9 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
 
     st.write(f"{t('paid_nights')}: {count_paid}")
     st.write(f"{t('unpaid_nights')}: {count_unpaid}")
-    st.write(f"{t('sum_paid')}: {sum_paid} €")
-    st.write(f"{t('sum_unpaid')}: {sum_unpaid} €")
-    st.write(f"**Gesamt: {sum_paid + sum_unpaid} €**")
+    st.write(f"{t('sum_paid')}: {sum_paid} {symbol}")
+    st.write(f"{t('sum_unpaid')}: {sum_unpaid} {symbol}")
+    st.write(f"**{t('total')}: {sum_paid + sum_unpaid} {symbol}**")
 
     # PDF & CSV
     pdf_bytes = generate_receipt_pdf(guest, t)
@@ -220,7 +242,16 @@ def page_new_guest(hotel_id, t):
     with st.expander(t("create_new_guest"), expanded=False):
         name = st.text_input(t("guest_name_label"))
         room = st.number_input(t("room_number_label"), min_value=1)
-        category = st.selectbox(t("room_category_label"), ["Einzel", "Doppel", "Familie", "Suite"])
+
+        category_options = [
+            t("room_cat_single"),
+            t("room_cat_double"),
+            t("room_cat_family"),
+            t("room_cat_suite"),
+        ]
+        category = st.selectbox(t("room_category_label"), category_options)
+
+        symbol = get_currency_symbol()
         price = st.number_input(t("price_per_night_label"), min_value=0.0)
 
         if st.button(t("save_guest")):
@@ -267,7 +298,14 @@ def page_rooms(hotel_id, t):
     # Neues Zimmer hinzufügen
     with st.expander(t("add_room_section"), expanded=False):
         number = st.number_input(t("room_number"), min_value=1, key="room_number_input")
-        category = st.selectbox(t("room_category"), ["Einzel", "Doppel", "Familie", "Suite"], key="room_category_input")
+
+        category_options = [
+            t("room_cat_single"),
+            t("room_cat_double"),
+            t("room_cat_family"),
+            t("room_cat_suite"),
+        ]
+        category = st.selectbox(t("room_category"), category_options, key="room_category_input")
 
         if st.button(t("save_room"), key="save_room_btn"):
             add_room(hotel_id, int(number), category)
@@ -314,6 +352,7 @@ def page_monthly_report(hotel_id, t):
     st.header(t("monthly_report"))
 
     guests = list_all_guests(hotel_id, include_checked_out=True)
+    symbol = get_currency_symbol()
 
     now = datetime.now()
     years = {now.year}
@@ -353,15 +392,15 @@ def page_monthly_report(hotel_id, t):
 
     st.subheader(t("monthly_details"))
     for g, cp, cu, sp, su in filtered:
-        st.write(f"**{g.name}** – Zimmer {g.room_number}")
+        st.write(f"**{g.name}** – {t('room')} {g.room_number}")
         st.write(f"{t('paid_nights')}: {cp}, {t('unpaid_nights')}: {cu}")
-        st.write(f"{t('sum_paid')}: {sp} €, {t('sum_unpaid')}: {su} €")
+        st.write(f"{t('sum_paid')}: {sp} {symbol}, {t('sum_unpaid')}: {su} {symbol}")
         st.markdown("---")
 
     st.subheader(t("monthly_total"))
-    st.write(f"{t('sum_paid')}: {total_paid} €")
-    st.write(f"{t('sum_unpaid')}: {total_unpaid} €")
-    st.write(f"Gesamt: {total_paid + total_unpaid} €")
+    st.write(f"{t('sum_paid')}: {total_paid} {symbol}")
+    st.write(f"{t('sum_unpaid')}: {total_unpaid} {symbol}")
+    st.write(f"{t('total')}: {total_paid + total_unpaid} {symbol}")
 
 
 def page_change_password(hotel_id, t):
@@ -397,9 +436,15 @@ def main():
     user = st.session_state["user"]
     hotel_id = user.get("tenant_id")
 
+    # Sprache laden
     lang = st.session_state.get("language", "de")
     texts = load_language(lang)
     t = translator(texts)
+
+    # Währung aus User-Dokument laden (falls vorhanden)
+    if "currency" not in st.session_state:
+        user_currency = user.get("currency", "USD")
+        st.session_state["currency"] = user_currency
 
     st.set_page_config(page_title=t("app_title"), layout="wide")
     load_css()
@@ -412,7 +457,7 @@ def main():
     with st.sidebar:
         st.title(t("navigation"))
 
-        logout = st.button("Abmelden")
+        logout = st.button(t("logout"))
 
         st.markdown("---")
 
@@ -428,6 +473,39 @@ def main():
 
         st.markdown("---")
 
+        # Währungsauswahl (mit Firestore-Speicherung)
+        currency_options = {
+            "USD": t("currency_usd"),
+            "EUR": t("currency_eur"),
+            "ETB": t("currency_etb"),
+            "SAR": t("currency_sar"),
+            "GBP": t("currency_gbp"),
+            "CAD": t("currency_cad"),
+        }
+
+        current_code = get_currency_code()
+        current_label = currency_options.get(current_code, t("currency_usd"))
+
+        selected_label = st.selectbox(
+            t("currency"),
+            list(currency_options.values()),
+            index=list(currency_options.values()).index(current_label),
+        )
+
+        reverse_map = {v: k for k, v in currency_options.items()}
+        new_code = reverse_map[selected_label]
+
+        if new_code != current_code:
+            st.session_state["currency"] = new_code
+            # In Firestore speichern
+            try:
+                db.collection("users").document(user["id"]).update({"currency": new_code})
+                st.session_state["user"]["currency"] = new_code
+            except Exception:
+                pass
+
+        st.markdown("---")
+
         pages = {
             t("dashboard"): "Dashboard",
             t("new_guest_page"): "Neuen Gast anlegen",
@@ -439,8 +517,8 @@ def main():
             t("change_password"): "Passwort ändern",
         }
 
-        selected_label = st.radio(t("select_page"), list(pages.keys()))
-        st.session_state["page"] = pages[selected_label]
+        selected_label_page = st.radio(t("select_page"), list(pages.keys()))
+        st.session_state["page"] = pages[selected_label_page]
 
     if logout:
         lang = st.session_state.get("language", "de")
