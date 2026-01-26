@@ -518,6 +518,82 @@ def page_edit_guest(hotel_id, t):
 
     st.header(t("edit_guest"))
 
+    # -----------------------------
+    # Name bearbeiten
+    # -----------------------------
+    name = st.text_input(
+        t("guest_name_label"),
+        value=guest.name,
+        key=f"edit_name_{gid}"
+    )
+
+    # -----------------------------
+    # Zimmernummer bearbeiten
+    # -----------------------------
+    room_number = st.number_input(
+        t("room_number_label"),
+        min_value=1,
+        value=guest.room_number,
+        key=f"edit_room_{gid}"
+    )
+
+    # -----------------------------
+    # Zimmerkategorie bearbeiten
+    # -----------------------------
+    category_options = [
+        t("room_cat_single"),
+        t("room_cat_double"),
+        t("room_cat_family"),
+        t("room_cat_suite"),
+    ]
+
+    try:
+        idx = category_options.index(guest.room_category)
+    except ValueError:
+        idx = 0
+
+    room_category = st.selectbox(
+        t("room_category_label"),
+        category_options,
+        index=idx,
+        key=f"edit_cat_{gid}"
+    )
+
+    # -----------------------------
+    # Preis bearbeiten
+    # -----------------------------
+    price = st.number_input(
+        t("price_per_night_label"),
+        min_value=0.0,
+        value=float(guest.price_per_night),
+        key=f"edit_price_{gid}"
+    )
+
+    # -----------------------------
+    # Speichern
+    # -----------------------------
+    if st.button(t("save_changes"), key=f"save_changes_{gid}"):
+
+        try:
+            update_guest_details(
+                hotel_id,
+                guest_id=gid,
+                new_name=name,
+                new_room_number=int(room_number),
+                new_room_category=room_category,
+                new_price=float(price),
+            )
+
+            st.success(t("guest_updated"))
+
+            # zurück zur Gästeliste
+            st.session_state["edit_guest_id"] = None
+            st.session_state["page"] = "Gästeliste"
+            st.rerun()
+
+        except ValueError as e:
+            st.error(str(e))
+
     # Zimmernummer
     room_number = st.number_input(
         t("room_number_label"),
