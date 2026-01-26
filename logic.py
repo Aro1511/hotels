@@ -215,6 +215,9 @@ def set_night_paid_status(
     return guest
 
 
+# ---------------------------------------------------------
+# Summenberechnung (mit Rückwärtskompatibilität)
+# ---------------------------------------------------------
 def calculate_nights_summary(guest: Guest) -> Tuple[int, int, float, float]:
     paid_nights = [n for n in guest.nights if n.paid]
     unpaid_nights = [n for n in guest.nights if not n.paid]
@@ -222,9 +225,12 @@ def calculate_nights_summary(guest: Guest) -> Tuple[int, int, float, float]:
     count_paid = len(paid_nights)
     count_unpaid = len(unpaid_nights)
 
-    # Preis pro Nacht aus der Nacht selbst
-    sum_paid = sum(n.price for n in paid_nights)
-    sum_unpaid = sum(n.price for n in unpaid_nights)
+    # Falls alte Nächte kein price-Feld haben → fallback auf guest.price_per_night
+    def get_price(n):
+        return getattr(n, "price", guest.price_per_night)
+
+    sum_paid = sum(get_price(n) for n in paid_nights)
+    sum_unpaid = sum(get_price(n) for n in unpaid_nights)
 
     return count_paid, count_unpaid, sum_paid, sum_unpaid
 
