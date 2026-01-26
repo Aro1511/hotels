@@ -36,6 +36,7 @@ DEFAULTS = {
     "edit_guest_id": None,
 }
 
+
 def init_state():
     for key, value in DEFAULTS.items():
         if key not in st.session_state:
@@ -47,6 +48,7 @@ def init_state():
 # ---------------------------------------------------------
 def get_currency_code():
     return st.session_state.get("currency", "USD")
+
 
 def get_currency_symbol():
     code = get_currency_code()
@@ -67,7 +69,7 @@ def load_css():
     try:
         with open("style.css") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except:
+    except Exception:
         pass
 
 
@@ -78,6 +80,7 @@ def image_to_base64(img):
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     return base64.b64encode(buffer.getvalue()).decode()
+
 
 def show_header(t):
     try:
@@ -105,8 +108,10 @@ def show_header(t):
             """,
             unsafe_allow_html=True,
         )
-    except:
+    except Exception:
         st.title(t("header_title"))
+
+
 # ---------------------------------------------------------
 # Guest Accordion
 # ---------------------------------------------------------
@@ -269,7 +274,10 @@ def page_dashboard(hotel_id, t):
     st.write(f"{t('stats_rooms_occupied')}: {len(occupied_rooms)}")
     st.write(f"{t('stats_rooms_free')}: {len(free_rooms)}")
     st.write(f"{t('dashboard_revenue_this_month')}: {revenue_this_month} {symbol}")
-    st.write(f"{t('dashboard_unpaid_nights_this_month')}: {unpaid_nights_this_month} ({unpaid_sum_this_month} {symbol})")
+    st.write(
+        f"{t('dashboard_unpaid_nights_this_month')}: "
+        f"{unpaid_nights_this_month} ({unpaid_sum_this_month} {symbol})"
+    )
 
     st.markdown("---")
 
@@ -303,7 +311,6 @@ def page_dashboard(hotel_id, t):
             })
         st.table(rows)
 
-    # ⭐ KORREKTUR HIER:
     st.markdown("---")
 
     st.subheader(t("dashboard_open_balances_title"))
@@ -370,7 +377,6 @@ def page_guest_list(hotel_id, t):
 def page_search(hotel_id, t):
     st.header(t("search_page"))
 
-    q = ""
     with st.expander(t("search_page"), expanded=False):
         q = st.text_input(t("search_name"))
 
@@ -455,6 +461,7 @@ def page_monthly_report(hotel_id, t):
 
     now = datetime.now()
     years = {now.year}
+
     for g in guests:
         if g.checkin_date:
             try:
@@ -462,6 +469,7 @@ def page_monthly_report(hotel_id, t):
                 years.add(d.year)
             except ValueError:
                 pass
+
     years = sorted(years)
 
     col1, col2 = st.columns(2)
@@ -479,6 +487,7 @@ def page_monthly_report(hotel_id, t):
             d = datetime.strptime(g.checkin_date, "%Y-%m-%d")
         except ValueError:
             continue
+
         if d.year == year and d.month == month:
             cp, cu, sp, su = calculate_nights_summary(g)
             filtered.append((g, cp, cu, sp, su))
@@ -501,7 +510,7 @@ def page_monthly_report(hotel_id, t):
     st.write(f"{t('sum_unpaid')}: {total_unpaid} {symbol}")
     st.write(f"{t('total')}: {total_paid + total_unpaid} {symbol}")
 # ---------------------------------------------------------
-# Gast bearbeiten
+# Gast bearbeiten (NEU, SAUBER, FEHLERFREI)
 # ---------------------------------------------------------
 def page_edit_guest(hotel_id, t):
     gid = st.session_state.get("edit_guest_id")
@@ -594,64 +603,9 @@ def page_edit_guest(hotel_id, t):
         except ValueError as e:
             st.error(str(e))
 
-    # Zimmernummer
-    room_number = st.number_input(
-        t("room_number_label"),
-        min_value=1,
-        value=guest.room_number,
-        key=f"edit_room_{gid}"
-    )
-
-    # Zimmerkategorie
-    category_options = [
-        t("room_cat_single"),
-        t("room_cat_double"),
-        t("room_cat_family"),
-        t("room_cat_suite"),
-    ]
-
-    try:
-        idx = category_options.index(guest.room_category)
-    except ValueError:
-        idx = 0
-
-    room_category = st.selectbox(
-        t("room_category_label"),
-        category_options,
-        index=idx,
-        key=f"edit_cat_{gid}"
-    )
-
-    # Preis
-    price = st.number_input(
-        t("price_per_night_label"),
-        min_value=0.0,
-        value=float(guest.price_per_night),
-        key=f"edit_price_{gid}"
-    )
-
-    # Speichern
-    if st.button(t("save_changes"), key=f"save_changes_{gid}"):
-        try:
-            update_guest_details(
-                hotel_id,
-                guest_id=gid,
-                new_room_number=int(room_number),
-                new_room_category=room_category,
-                new_price=float(price),
-            )
-            st.success(t("guest_updated"))
-
-            st.session_state["edit_guest_id"] = None
-            st.session_state["page"] = "Gästeliste"
-            st.rerun()
-
-        except ValueError as e:
-            st.error(str(e))
-
 
 # ---------------------------------------------------------
-# Sidebar Navigation (KORRIGIERT!)
+# Sidebar Navigation (NEU, STABIL, FEHLERFREI)
 # ---------------------------------------------------------
 def render_sidebar(t, user):
     with st.sidebar:
@@ -705,6 +659,7 @@ def render_sidebar(t, user):
                 pass
 
         st.markdown("---")
+
         # Seiten (OHNE „Gast bearbeiten“)
         pages = {
             t("dashboard"): "Dashboard",
@@ -742,7 +697,6 @@ def render_sidebar(t, user):
         st.session_state["page"] = pages[selected_label_page]
 
         return logout
-
 # ---------------------------------------------------------
 # Passwort ändern
 # ---------------------------------------------------------
