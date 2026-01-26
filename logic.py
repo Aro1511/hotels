@@ -112,11 +112,12 @@ def update_guest(hotel_id: str, updated_guest: Guest) -> None:
 
 
 # ---------------------------------------------------------
-# NEU: Gast bearbeiten (Zimmer, Kategorie, Preis)
+# Gast bearbeiten (Name, Zimmer, Kategorie, Preis)
 # ---------------------------------------------------------
 def update_guest_details(
     hotel_id: str,
     guest_id: int,
+    new_name: str,
     new_room_number: int,
     new_room_category: str,
     new_price: float
@@ -130,6 +131,9 @@ def update_guest_details(
         raise ValueError("Gast nicht gefunden")
 
     old_room_number = guest.room_number
+
+    # Name aktualisieren
+    guest.name = new_name
 
     # Wenn Zimmer gewechselt wird
     if new_room_number != old_room_number:
@@ -158,8 +162,10 @@ def update_guest_details(
         # Gast aktualisieren
         guest.room_number = new_room_number
 
-    # Kategorie & Preis aktualisieren
+    # Kategorie aktualisieren
     guest.room_category = new_room_category
+
+    # Neuer Preis gilt nur für zukünftige Nächte
     guest.price_per_night = new_price
 
     # Speichern
@@ -180,7 +186,13 @@ def add_night_to_guest(hotel_id: str, guest_id: int, paid: bool) -> Guest:
             if g.nights:
                 next_number = max(n.number for n in g.nights) + 1
 
-            g.nights.append(Night(number=next_number, paid=paid))
+            # Jede Nacht speichert ihren eigenen Preis
+            g.nights.append(Night(
+                number=next_number,
+                paid=paid,
+                price=g.price_per_night
+            ))
+
             update_guest(hotel_id, g)
             return g
 
@@ -210,8 +222,9 @@ def calculate_nights_summary(guest: Guest) -> Tuple[int, int, float, float]:
     count_paid = len(paid_nights)
     count_unpaid = len(unpaid_nights)
 
-    sum_paid = count_paid * guest.price_per_night
-    sum_unpaid = count_unpaid * guest.price_per_night
+    # Preis pro Nacht aus der Nacht selbst
+    sum_paid = sum(n.price for n in paid_nights)
+    sum_unpaid = sum(n.price for n in unpaid_nights)
 
     return count_paid, count_unpaid, sum_paid, sum_unpaid
 
