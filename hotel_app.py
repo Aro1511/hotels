@@ -629,7 +629,6 @@ def render_sidebar(t, user):
                 pass
 
         st.markdown("---")
-
         # Seiten (OHNE „Gast bearbeiten“)
         pages = {
             t("dashboard"): "Dashboard",
@@ -648,6 +647,10 @@ def render_sidebar(t, user):
         # aktuelle Seite aus Session State
         current_page = st.session_state.get("page", "Dashboard")
 
+        # ⭐ WICHTIG: Wenn wir auf „Gast bearbeiten“ sind → Sidebar NICHT überschreiben
+        if current_page == "Gast bearbeiten":
+            return logout
+
         # passenden Index finden
         try:
             current_index = values.index(current_page)
@@ -663,7 +666,6 @@ def render_sidebar(t, user):
         st.session_state["page"] = pages[selected_label_page]
 
         return logout
-
 
 # ---------------------------------------------------------
 # Passwort ändern
