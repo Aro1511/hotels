@@ -1,7 +1,6 @@
 from dataclasses import dataclass, asdict, field
 from typing import List, Optional
 
-
 # ---------------------------------------------------------
 # Datenklasse: Nacht
 # ---------------------------------------------------------
@@ -9,6 +8,7 @@ from typing import List, Optional
 class Night:
     number: int
     paid: bool = False
+    price: float = 0.0   # <-- WICHTIG: hinzugefügt!
 
 
 # ---------------------------------------------------------
@@ -47,7 +47,14 @@ def guest_to_dict(guest: Guest) -> dict:
         "room_number": guest.room_number,
         "room_category": guest.room_category,
         "price_per_night": guest.price_per_night,
-        "nights": [{"number": n.number, "paid": n.paid} for n in guest.nights],
+        "nights": [
+            {
+                "number": n.number,
+                "paid": n.paid,
+                "price": n.price,   # <-- WICHTIG: hinzugefügt!
+            }
+            for n in guest.nights
+        ],
         "checkin_date": guest.checkin_date,
         "checkout_date": guest.checkout_date,
         "status": guest.status,
@@ -63,6 +70,7 @@ def guest_from_dict(data: dict) -> Guest:
         Night(
             number=n.get("number", 0),
             paid=n.get("paid", False),
+            price=n.get("price", data.get("price_per_night", 0.0)),  # <-- fallback
         )
         for n in nights_raw
     ]
