@@ -307,7 +307,7 @@ def page_dashboard(hotel_id, t):
 
 
 # ---------------------------------------------------------
-# Neue Gäste anlegen (mit automatischem Zurücksetzen)
+# Neue Gäste anlegen (mit sicherem Zurücksetzen)
 # ---------------------------------------------------------
 def page_new_guest(hotel_id, t):
     st.header(t("new_guest_page"))
@@ -351,11 +351,10 @@ def page_new_guest(hotel_id, t):
 
                 st.success(t("guest_saved"))
 
-                # Felder zurücksetzen
-                st.session_state["new_guest_name"] = ""
-                st.session_state["new_guest_room"] = 1
-                st.session_state["new_guest_category"] = category_options[0]
-                st.session_state["new_guest_price"] = 0.0
+                # Felder sicher löschen (Streamlit-konform)
+                for key in ["new_guest_name", "new_guest_room", "new_guest_category", "new_guest_price"]:
+                    if key in st.session_state:
+                        del st.session_state[key]
 
                 st.rerun()
 
