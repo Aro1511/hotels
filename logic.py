@@ -18,24 +18,39 @@ def _get_next_guest_id(guests: List[Guest]) -> int:
 # Zimmer-Funktionen
 # ---------------------------------------------------------
 def add_room(hotel_id: str, number: int, category: str) -> None:
+    """
+    Fügt ein Zimmer hinzu.
+    - Wenn Zimmernummer schon existiert → Kategorie aktualisieren, kein Fehler.
+    - Wenn nicht existiert → neues Zimmer anlegen.
+    """
     rooms = load_rooms(hotel_id)
 
+    existing = None
     for r in rooms:
         if r.number == number:
-            raise ValueError(f"Zimmer {number} existiert bereits.")
+            existing = r
+            break
 
-    new_room = Room(number=number, category=category, occupied=False)
-    rooms.append(new_room)
+    if existing:
+        # Kategorie ggf. korrigieren, Belegung bleibt wie sie ist
+        existing.category = category
+    else:
+        new_room = Room(number=number, category=category, occupied=False)
+        rooms.append(new_room)
+
     save_rooms(hotel_id, rooms)
 
 
 def set_room_occupied(hotel_id: str, room_number: int, occupied: bool) -> None:
     rooms = load_rooms(hotel_id)
+    changed = False
     for r in rooms:
         if r.number == room_number:
             r.occupied = occupied
+            changed = True
             break
-    save_rooms(hotel_id, rooms)
+    if changed:
+        save_rooms(hotel_id, rooms)
 
 
 def get_room(hotel_id: str, room_number: int) -> Optional[Room]:
@@ -65,6 +80,10 @@ def add_guest(
     if room is None:
         room = Room(number=room_number, category=room_category, occupied=False)
         rooms.append(room)
+    else:
+        # Kategorie ggf. korrigieren
+        if room.category != room_category:
+            room.category = room_category
 
     if room.occupied:
         raise ValueError(f"Zimmer {room_number} ist bereits belegt.")
@@ -151,6 +170,10 @@ def update_guest_details(
         if new_room is None:
             new_room = Room(number=new_room_number, category=new_room_category, occupied=False)
             rooms.append(new_room)
+        else:
+            # Kategorie ggf. korrigieren
+            if new_room.category != new_room_category:
+                new_room.category = new_room_category
 
         # Neues Zimmer darf nicht belegt sein
         if new_room.occupied:
