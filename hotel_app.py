@@ -210,7 +210,7 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
 
 
 # ---------------------------------------------------------
-# Dashboard – ohne Zimmerverwaltung, nur Gäste
+# Dashboard – ohne Zimmerverwaltung
 # ---------------------------------------------------------
 def page_dashboard(hotel_id, t):
     st.header(t("dashboard"))
@@ -221,7 +221,6 @@ def page_dashboard(hotel_id, t):
     current_guests = [g for g in guests if g.status == "checked_in"]
     checked_out_guests = [g for g in guests if g.status == "checked_out"]
 
-    # belegte Zimmer direkt aus Gästen
     occupied_rooms = {
         g.room_number: g.room_category
         for g in guests
@@ -243,7 +242,6 @@ def page_dashboard(hotel_id, t):
     for g in guests:
         cp, cu, sp, su = calculate_nights_summary(g)
 
-        # Nächte pro Zimmer
         room_nights[g.room_number] = room_nights.get(g.room_number, 0) + (cp + cu)
 
         if cu > 0 and su > 0:
@@ -278,7 +276,6 @@ def page_dashboard(hotel_id, t):
     )
 
     st.markdown("---")
-
     st.subheader(t("dashboard_top_rooms_title"))
     if not room_nights:
         st.info(t("dashboard_no_top_rooms"))
@@ -310,14 +307,16 @@ def page_dashboard(hotel_id, t):
 
 
 # ---------------------------------------------------------
-# Neue Gäste anlegen
+# Neue Gäste anlegen (mit automatischem Zurücksetzen)
 # ---------------------------------------------------------
 def page_new_guest(hotel_id, t):
     st.header(t("new_guest_page"))
 
     with st.expander(t("create_new_guest"), expanded=False):
-        name = st.text_input(t("guest_name_label"))
-        room = st.number_input(t("room_number_label"), min_value=1)
+
+        # Eingabefelder mit stabilen Keys
+        name = st.text_input(t("guest_name_label"), key="new_guest_name")
+        room = st.number_input(t("room_number_label"), min_value=1, key="new_guest_room")
 
         category_options = [
             t("room_cat_single"),
@@ -325,16 +324,39 @@ def page_new_guest(hotel_id, t):
             t("room_cat_family"),
             t("room_cat_suite"),
         ]
-        category = st.selectbox(t("room_category_label"), category_options)
 
-        price = st.number_input(t("price_per_night_label"), min_value=0.0)
+        category = st.selectbox(
+            t("room_category_label"),
+            category_options,
+            key="new_guest_category"
+        )
+
+        price = st.number_input(
+            t("price_per_night_label"),
+            min_value=0.0,
+            key="new_guest_price"
+        )
 
         if st.button(t("save_guest")):
-            if not name:
+            if not st.session_state["new_guest_name"]:
                 st.error(t("name_required"))
             else:
-                add_guest(hotel_id, name, int(room), category, float(price))
+                add_guest(
+                    hotel_id,
+                    st.session_state["new_guest_name"],
+                    int(st.session_state["new_guest_room"]),
+                    st.session_state["new_guest_category"],
+                    float(st.session_state["new_guest_price"])
+                )
+
                 st.success(t("guest_saved"))
+
+                # Felder zurücksetzen
+                st.session_state["new_guest_name"] = ""
+                st.session_state["new_guest_room"] = 1
+                st.session_state["new_guest_category"] = category_options[0]
+                st.session_state["new_guest_price"] = 0.0
+
                 st.rerun()
 
 
@@ -448,8 +470,6 @@ def page_monthly_report(hotel_id, t):
     st.write(f"{t('sum_paid')}: {total_paid} {symbol}")
     st.write(f"{t('sum_unpaid')}: {total_unpaid} {symbol}")
     st.write(f"{t('total')}: {total_paid + total_unpaid} {symbol}")
-
-
 # ---------------------------------------------------------
 # Gast bearbeiten
 # ---------------------------------------------------------
