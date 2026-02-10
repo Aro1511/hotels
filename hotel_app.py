@@ -5,7 +5,6 @@ from PIL import Image
 from datetime import datetime
 
 from logic import (
-    add_room,
     add_guest,
     add_night_to_guest,
     set_night_paid_status,
@@ -16,7 +15,6 @@ from logic import (
     delete_guest,
     update_guest_details,
 )
-from database import load_rooms, delete_room, set_room_free
 from models import Guest
 from utils import load_language, translator
 from pdf_generator import generate_receipt_pdf, generate_receipt_csv
@@ -30,8 +28,6 @@ from firebase_db import db
 DEFAULTS = {
     "page": "Dashboard",
     "open_guest_id": None,
-    "show_rooms": False,
-    "show_free_rooms": False,
     "currency": "USD",
     "edit_guest_id": None,
 }
@@ -214,19 +210,23 @@ def render_guest_accordion(hotel_id: str, guest: Guest, t, editable=True):
 
 
 # ---------------------------------------------------------
-# Dashboard
+# Dashboard – ohne Zimmerverwaltung, nur Gäste
 # ---------------------------------------------------------
 def page_dashboard(hotel_id, t):
     st.header(t("dashboard"))
 
     symbol = get_currency_symbol()
     guests = list_all_guests(hotel_id, include_checked_out=True)
-    rooms = load_rooms(hotel_id)
 
     current_guests = [g for g in guests if g.status == "checked_in"]
     checked_out_guests = [g for g in guests if g.status == "checked_out"]
-    occupied_rooms = [r for r in rooms if r.occupied]
-    free_rooms = [r for r in rooms if not r.occupied]
+
+    # belegte Zimmer direkt aus Gästen
+    occupied_rooms = {
+        g.room_number: g.room_category
+        for g in guests
+        if g.status == "checked_in"
+    }
 
     now = datetime.now()
     current_year = now.year
@@ -243,8 +243,8 @@ def page_dashboard(hotel_id, t):
     for g in guests:
         cp, cu, sp, su = calculate_nights_summary(g)
 
-        if g.room_number is not None:
-            room_nights[g.room_number] = room_nights.get(g.room_number, 0) + (cp + cu)
+        # Nächte pro Zimmer
+        room_nights[g.room_number] = room_nights.get(g.room_number, 0) + (cp + cu)
 
         if cu > 0 and su > 0:
             open_balances.append((g, cu, su))
@@ -270,31 +270,12 @@ def page_dashboard(hotel_id, t):
     st.subheader(t("dashboard_summary_title"))
     st.write(f"{t('stats_current_guests')}: {len(current_guests)}")
     st.write(f"{t('stats_checked_out')}: {len(checked_out_guests)}")
-    st.write(f"{t('stats_rooms_total')}: {len(rooms)}")
     st.write(f"{t('stats_rooms_occupied')}: {len(occupied_rooms)}")
-    st.write(f"{t('stats_rooms_free')}: {len(free_rooms)}")
     st.write(f"{t('dashboard_revenue_this_month')}: {revenue_this_month} {symbol}")
     st.write(
         f"{t('dashboard_unpaid_nights_this_month')}: "
         f"{unpaid_nights_this_month} ({unpaid_sum_this_month} {symbol})"
     )
-
-    st.markdown("---")
-
-    st.subheader(t("dashboard_monthly_overview_title"))
-    if not monthly_stats:
-        st.info(t("dashboard_no_monthly_data"))
-    else:
-        rows = []
-        for (y, m), (paid_n, rev, unpaid_n) in sorted(monthly_stats.items()):
-            rows.append({
-                t("dashboard_table_year"): y,
-                t("dashboard_table_month"): m,
-                t("dashboard_table_paid_nights"): paid_n,
-                t("dashboard_table_revenue"): f"{rev} {symbol}",
-                t("dashboard_table_unpaid_nights"): unpaid_n,
-            })
-        st.table(rows)
 
     st.markdown("---")
 
@@ -326,6 +307,8 @@ def page_dashboard(hotel_id, t):
                 t("sum_unpaid"): f"{su} {symbol}",
             })
         st.table(rows)
+
+
 # ---------------------------------------------------------
 # Neue Gäste anlegen
 # ---------------------------------------------------------
@@ -387,50 +370,6 @@ def page_search(hotel_id, t):
         else:
             for g in results:
                 render_guest_accordion(hotel_id, g, t)
-
-
-# ---------------------------------------------------------
-# Zimmerverwaltung
-# ---------------------------------------------------------
-def page_rooms(hotel_id, t):
-    st.header(t("room_management_page"))
-
-    with st.expander(t("add_room_section"), expanded=False):
-        number = st.number_input(t("room_number"), min_value=1, key="room_number_input")
-
-        category_options = [
-            t("room_cat_single"),
-            t("room_cat_double"),
-            t("room_cat_family"),
-            t("room_cat_suite"),
-        ]
-        category = st.selectbox(t("room_category"), category_options, key="room_category_input")
-
-        if st.button(t("save_room"), key="save_room_btn"):
-            add_room(hotel_id, int(number), category)
-            st.success(t("room_added").format(number=number))
-            st.rerun()
-
-    st.subheader(t("existing_rooms"))
-    rooms = load_rooms(hotel_id)
-
-    if not rooms:
-        st.info(t("no_rooms_yet"))
-        return
-
-    for r in rooms:
-        col1, col2, col3 = st.columns([3, 1, 1])
-        col1.write(f"{t('room')} {r.number} – {r.category} – {t('occupied') if r.occupied else t('free')}")
-
-        if col2.button(t("delete_room"), key=f"del_room_{r.number}"):
-            delete_room(hotel_id, r.number)
-            st.success(t("room_deleted"))
-            st.rerun()
-
-        if r.occupied and col3.button(t("free_room"), key=f"free_room_{r.number}"):
-            set_room_free(hotel_id, r.number)
-            st.success(t("room_freed"))
-            st.rerun()
 
 
 # ---------------------------------------------------------
@@ -509,8 +448,10 @@ def page_monthly_report(hotel_id, t):
     st.write(f"{t('sum_paid')}: {total_paid} {symbol}")
     st.write(f"{t('sum_unpaid')}: {total_unpaid} {symbol}")
     st.write(f"{t('total')}: {total_paid + total_unpaid} {symbol}")
+
+
 # ---------------------------------------------------------
-# Gast bearbeiten (NEU, SAUBER, FEHLERFREI)
+# Gast bearbeiten
 # ---------------------------------------------------------
 def page_edit_guest(hotel_id, t):
     gid = st.session_state.get("edit_guest_id")
@@ -527,18 +468,12 @@ def page_edit_guest(hotel_id, t):
 
     st.header(t("edit_guest"))
 
-    # -----------------------------
-    # Name bearbeiten
-    # -----------------------------
     name = st.text_input(
         t("guest_name_label"),
         value=guest.name,
         key=f"edit_name_{gid}"
     )
 
-    # -----------------------------
-    # Zimmernummer bearbeiten
-    # -----------------------------
     room_number = st.number_input(
         t("room_number_label"),
         min_value=1,
@@ -546,9 +481,6 @@ def page_edit_guest(hotel_id, t):
         key=f"edit_room_{gid}"
     )
 
-    # -----------------------------
-    # Zimmerkategorie bearbeiten
-    # -----------------------------
     category_options = [
         t("room_cat_single"),
         t("room_cat_double"),
@@ -568,9 +500,6 @@ def page_edit_guest(hotel_id, t):
         key=f"edit_cat_{gid}"
     )
 
-    # -----------------------------
-    # Preis bearbeiten
-    # -----------------------------
     price = st.number_input(
         t("price_per_night_label"),
         min_value=0.0,
@@ -578,9 +507,6 @@ def page_edit_guest(hotel_id, t):
         key=f"edit_price_{gid}"
     )
 
-    # -----------------------------
-    # Speichern
-    # -----------------------------
     if st.button(t("save_changes"), key=f"save_changes_{gid}"):
 
         try:
@@ -595,7 +521,6 @@ def page_edit_guest(hotel_id, t):
 
             st.success(t("guest_updated"))
 
-            # zurück zur Gästeliste
             st.session_state["edit_guest_id"] = None
             st.session_state["page"] = "Gästeliste"
             st.rerun()
@@ -605,26 +530,13 @@ def page_edit_guest(hotel_id, t):
 
 
 # ---------------------------------------------------------
-# Sidebar Navigation (NEU, STABIL, FEHLERFREI)
+# Sidebar Navigation
 # ---------------------------------------------------------
 def render_sidebar(t, user):
     with st.sidebar:
         st.title(t("navigation"))
 
         logout = st.button(t("logout"))
-
-        st.markdown("---")
-
-        # Zimmerfilter
-        st.session_state["show_rooms"] = st.checkbox(
-            t("stats_rooms_occupied"),
-            value=st.session_state.get("show_rooms", False),
-        )
-
-        st.session_state["show_free_rooms"] = st.checkbox(
-            t("stats_rooms_free"),
-            value=st.session_state.get("show_free_rooms", False),
-        )
 
         st.markdown("---")
 
@@ -660,13 +572,11 @@ def render_sidebar(t, user):
 
         st.markdown("---")
 
-        # Seiten (OHNE „Gast bearbeiten“)
         pages = {
             t("dashboard"): "Dashboard",
             t("new_guest_page"): "Neuen Gast anlegen",
             t("guest_list_page"): "Gästeliste",
             t("search_page"): "Suche",
-            t("room_management_page"): "Zimmerverwaltung",
             t("checkout_page"): "Checkout",
             t("monthly_report"): "Monatsabrechnung",
             t("change_password"): "Passwort ändern",
@@ -675,14 +585,11 @@ def render_sidebar(t, user):
         labels = list(pages.keys())
         values = list(pages.values())
 
-        # aktuelle Seite aus Session State
         current_page = st.session_state.get("page", "Dashboard")
 
-        # ⭐ WICHTIG: Wenn wir auf „Gast bearbeiten“ sind → Sidebar NICHT überschreiben
         if current_page == "Gast bearbeiten":
             return logout
 
-        # passenden Index finden
         try:
             current_index = values.index(current_page)
         except ValueError:
@@ -697,6 +604,8 @@ def render_sidebar(t, user):
         st.session_state["page"] = pages[selected_label_page]
 
         return logout
+
+
 # ---------------------------------------------------------
 # Passwort ändern
 # ---------------------------------------------------------
@@ -721,10 +630,9 @@ def page_change_password(hotel_id, t):
 
 
 # ---------------------------------------------------------
-# Routing + MAIN
+# MAIN
 # ---------------------------------------------------------
 def main():
-    # Benutzer muss eingeloggt sein
     if "user" not in st.session_state or not st.session_state["user"]:
         st.write("Bitte zuerst einloggen…")
         st.stop()
@@ -732,68 +640,48 @@ def main():
     user = st.session_state["user"]
     hotel_id = user.get("tenant_id")
 
-    # Sprache laden
     lang = st.session_state.get("language", "de")
     texts = load_language(lang)
     t = translator(texts)
 
-    # Währung initialisieren
     if "currency" not in st.session_state:
         user_currency = user.get("currency", "USD")
         st.session_state["currency"] = user_currency
 
-    # Streamlit Setup
     st.set_page_config(page_title=t("app_title"), layout="wide")
     load_css()
     init_state()
 
-    # Header
     show_header(t)
     st.caption(f"Eingeloggt als: {user.get('email')} – Mandant: {hotel_id}")
 
-    # Sidebar rendern
     logout = render_sidebar(t, user)
 
-    # Logout
     if logout:
         lang = st.session_state.get("language", "de")
         st.session_state.clear()
         st.session_state["language"] = lang
         st.rerun()
 
-    # Routing
     page = st.session_state["page"]
 
     if page == "Dashboard":
         page_dashboard(hotel_id, t)
-
     elif page == "Neuen Gast anlegen":
         page_new_guest(hotel_id, t)
-
     elif page == "Gästeliste":
         page_guest_list(hotel_id, t)
-
     elif page == "Suche":
         page_search(hotel_id, t)
-
-    elif page == "Zimmerverwaltung":
-        page_rooms(hotel_id, t)
-
     elif page == "Checkout":
         page_checkout(hotel_id, t)
-
     elif page == "Monatsabrechnung":
         page_monthly_report(hotel_id, t)
-
     elif page == "Passwort ändern":
         page_change_password(hotel_id, t)
-
     elif page == "Gast bearbeiten":
         page_edit_guest(hotel_id, t)
 
 
-# ---------------------------------------------------------
-# Startpunkt
-# ---------------------------------------------------------
 if __name__ == "__main__":
     main()
